@@ -24,7 +24,7 @@ target_include_directories(Eigen3::Eigen INTERFACE ${eigen3_SOURCE_DIR})
 CPMAddPackage(
         NAME libigl
         GIT_REPOSITORY http://github.com/libigl/libigl/
-        GIT_TAG v2.2.0
+        GIT_TAG master
 )
 
 CPMAddPackage(
@@ -38,9 +38,10 @@ target_include_directories(ceres INTERFACE ${ceres_SOURCE_DIR})
 
 # Set files to be compiled
 set(HEADER_FILES
-        )
+        arap/VertexSelectionPlugin.h)
+
 set(SOURCE_FILES
-        )
+        arap/VertexSelectionPlugin.cpp)
 
 add_executable(arap arap/main.cpp ${HEADER_FILES} ${SOURCE_FILES})
-target_link_libraries(arap igl::core igl::opengl_glfw ceres)
+target_link_libraries(arap igl::core igl::opengl igl::opengl_glfw_imgui igl::opengl_glfw ceres)
