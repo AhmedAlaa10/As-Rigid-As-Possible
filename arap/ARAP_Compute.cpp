@@ -1,4 +1,4 @@
-#include "Arap_Compute.h"
+#include "ARAP_Compute.h"
 
 #include "igl/slice.h"
 
