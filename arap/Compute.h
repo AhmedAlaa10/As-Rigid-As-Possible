@@ -65,47 +65,6 @@ public:
 
 
 
-protected:
-
-
-	//a total no. of vertices x 3 matrix
-	//each row represents a vertix position
-	const Eigen::MatrixXd vertices_;
-
-	//stores the output( vertices positions ) of the computeARAP function
-	Eigen::MatrixXd updatedVertices_;
-
-	//used to cache vertices passed in computeARAP or Preprocess
-	Eigen::MatrixXd fixedVertices_;
-
-	//a no. of faces x 3 matrix
-	//the ith row stores the indices of the vertices of the ith face
-	const Eigen::MatrixXi faces_;
-
-	//fixedVertices_Index is a vector of the indices of the vertices we want to fix during the deformation.
-	//the fixed vertices are defined by the interacting user.
-	const Eigen::VectorXi fixedVertices_Index;
-
-	//freeVertices_Index is a vector of the indices of the free vertices.
-	//freeVertices_Index = total no. of vertices - no. of fixed indices
-	Eigen::VectorXi freeVertices_Index;
-
-	//maximum no. of iterations used to solve the ARAP problem
-	const int maxIterations_;
-
-	//stores all neighborhoods of each vertex
-	std::vector<vertixNeighbors> neighbors_;
-
-	//A sparse matrix used to store weights
-	//This is a nVertices x nVertices matrix with zero diagonal elements
-	//since the element i-j s.t. i=j is a not an edge but a point
-	//the element i-j s.t. i!=j is the edge between vertix(i) and vertix(j)
-	Eigen::SparseMatrix<double> weight_;
-
-	//store rotations for all vertices in a vector of matrices
-	//This can be viewed as the matrix R = 3nx3
-	std::vector<Eigen::Matrix3d> rotations;
-
 };
 
 inline const Eigen::MatrixXd& Compute::GetNewVertices() const {
