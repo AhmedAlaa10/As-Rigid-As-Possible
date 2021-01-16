@@ -2,8 +2,7 @@
 
 #include "igl/slice.h"
 
-//Helps mapping from a vertex to the corresponding edge
-const int VertexToEdge_map[3][2] = { {0, 1}, {1, 2}, {2, 0} };
+
 
 
 ArapCompute::ArapCompute(const Eigen::MatrixXd& vertices, const Eigen::VectorXi& fixedVertices,
@@ -14,50 +13,84 @@ ArapCompute::ArapCompute(const Eigen::MatrixXd& vertices, const Eigen::VectorXi&
 
 void ArapCompute::Prefactorize()
 {
+
+//Helps mapping from a vertex to the corresponding edge
+    const int VertexToEdge_map[3][2] = { {0, 1}, {1, 2}, {2, 0} };
 	int nVertices = vertices_.rows();
 	int nFree = freeVertices_Index.size();
 	int nFaces = faces_.size();
 
-	//compute weights
-	weight_.resize(nVertices, nVertices);
 
-	for (int face = 0; face < nFaces; face++)
-	{
-		//compute the cotangent vector of the face
-		Eigen::Vector3d cotan = ComputeCotangent(face);
-
-		//loop over the three vertices within the face
-		for (int v = 0; v < 3; v++)
-		{
-			//indices of the two vertices in the edge
-			int firstVertix = faces_(face, VertexToEdge_map[v][0]);
-			int secondVertix = faces_(face, VertexToEdge_map[v][1]);
-
-			//using .coeff() gave an error but using coeffRef() didn't
-			//in Eigen::SparseMatrix, coeffRef() returns a non-constant reference to the value
-			//of the matrix at position i, j
-			weight_.coeffRef(firstVertix, secondVertix) += cotan(v) / 2.0;
-
-			//since the weight of the edge i-j (edge between vertix(i) and vertix(j) is the same
-			//of the edge j-i, then we assign them the same weight in the weight_ matrix
-			weight_.coeffRef(secondVertix, firstVertix) += cotan(v) / 2.0;
-		}
-	}
-
-	//compute neighbors
+    //compute neighbors
 	neighbors_.resize(nVertices, vertixNeighbors());
-	
+
 	for (int face = 0; face < nFaces; face++)
 	{
 		for (int v = 0; v < nVertices; v++)
 		{
-			int firstVertix = faces_(face, VertexToEdge_map[v][0]);
-			int secondVertix = faces_(face, VertexToEdge_map[v][1]);
+			int firstVertex = faces_(face, VertexToEdge_map[v][0]);
+			int secondVertex = faces_(face, VertexToEdge_map[v][1]);
 
-			neighbors_[firstVertix][secondVertix] = secondVertix;
-			neighbors_[secondVertix][firstVertix] = firstVertix;
+			neighbors_[firstVertex][secondVertex] = secondVertex;
+			neighbors_[secondVertex][firstVertex] = firstVertex;
 		}
 	}
+
+
+	//compute weights
+	weight_.resize(nVertices, nVertices);
+	for (int face = 0; face < nFaces; face++)
+	{
+		//compute the cotangent vector of the face
+		/* TODO:
+		function to get the angles
+		thoughts:
+		each edge defines two unique angles
+		thus we can iterate through the edges
+		how to get the edges:
+
+		*/
+
+		//loop over the three vertices within the face
+		for (int v = 0; v < 3; v++)
+		{
+			//indices and coordinates of each vertex of each face
+			int firstVertex = faces_(face, VertexToEdge_map[v][0]);
+			int secondVertex = faces_(face, VertexToEdge_map[v][1]);
+            int thirdVertex = face_(face, VertexToEdge_map[v][2]);
+            Eigen::Vector3d A = vertices_.row(firstVertex);
+            Eigen::Vector3d B = vertices_.row(secondVertex);
+            Eigen::Vector3d C = vertices_.row(thirdVertex);
+        }
+        // get each angle in the face
+        double alpha = angleBetweenVectors(A - B, A - C);
+        double beta = angleBetweenVectors(B - A, B - C);
+        double gamma = angleBetweeenVectors(A - C, B - C);
+
+
+
+			//using .coeff() gave an error but using coeffRef() didn't
+			//in Eigen::SparseMatrix, coeffRef() returns a non-constant reference to the value
+			//of the matrix at position i, j
+			weight_.coeffRef(firstVertex, secondVertex) +=  1 / (2.0 * std::tan(alpha));
+			weight_.coeffRef(firstVertex, thirdVertex) += 1 / (2.0 * std::tan());
+            weight_.coeffRef(secondVertex, thirdVertex) += 1 / (2.0 * std::tan());
+			//since the weight of the edge i-j (edge between vertix(i) and vertix(j) is the same
+			//of the edge j-i, then we assign them the same weight in the weight_ matrix
+			weight_.coeffRef(secondVertex, firstVertex) += 1 / (2.0 * std::tan(beta));
+			weight_.coeffRef(firstVertex, thirdVertex) += 1 / (2.0 * std::tan());
+			weight_.coeffRef(secondVertex, thirdVertex) += 1 / (2.0 * std::tan());
+		}
+
+double angleBetweenVectors(Eigen::Vector3d a, Eigen::Vector3d b) {
+
+double angle = 0.0;
+
+angle = std::atan2(a.cross(b).norm(), a.dot(b));
+
+return angle;
+}
+
 
 
 	//compute the laplace-beltrami operator
@@ -75,7 +108,7 @@ void ArapCompute::Prefactorize()
 	//TODO: Check for success of factorization
 }
 
-//Idea: Laplacian smoothing for the mesh 
+//Idea: Laplacian smoothing for the mesh
 //will leave it to the end.
 void ArapCompute::Preprocess(const Eigen::MatrixXd& fixedVertices)
 {
@@ -104,7 +137,7 @@ void ArapCompute::SingleIteration()
 
 	//Step 2: Compute the matrix of rotated vertex gradients (the R.H.S in equation (9))
 	// equation (9): L * P' = B, where B is an nx3 matrix
-	// B = KR 
+	// B = KR
 	// K is nx3n sparse matrix containing Wij * (Pi - Pj)
 	// R is a matrix of rotation matrices
 	//Reminder: n is the number of vertices in the mesh
@@ -117,6 +150,13 @@ Eigen::Vector3d ArapCompute::ComputeCotangent(int face_index) const
 {
 	//inititalize the cotangent vector
 	//REMINDER: the cotangent is the per-edge weight in the paper (i.e. Wij)
+    angle = atan2(norm(cross(a,b)),dot(a,b));
+
+    double angleBetweenVectors(Eigen::Vector3d a, Eigen::Vector3d b) {
+
+    double angle = 0.0;
+
+    angle = std::atan2(a.cross(b).norm(), a.dot(b));
 	Eigen::Vector3d cotangent(0.0, 0.0, 0.0);
 
 	return cotangent;
