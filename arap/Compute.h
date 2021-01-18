@@ -66,7 +66,7 @@ public:
 
 
 };
-
+/*
 inline const Eigen::MatrixXd& Compute::GetNewVertices() const {
 	return updatedVertices_;
 }
@@ -82,7 +82,7 @@ inline const Eigen::VectorXi& Compute::GetFixedVertices() const {
 inline const int Compute::GetIterations() const {
 	return maxIterations_;
 }
-
+*/
 
 #endif
 
