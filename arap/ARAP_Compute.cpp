@@ -19,6 +19,8 @@ ArapCompute::ArapCompute(const Eigen::MatrixXd& vertices,
 
 void ArapCompute::ComputeWeights()
 {
+    std::cout << "Computing weights ..." << std::endl;
+
     //compute weights
     int nVertices = vertices_.rows();
     int nFaces = faces_.size();
@@ -65,6 +67,8 @@ void ArapCompute::ComputeWeights()
         weight_.coeffRef(thirdVertex, firstVertex)  += 1 / (2.0 * std::tan(beta));
         weight_.coeffRef(secondVertex, firstVertex) += 1 / (2.0 * std::tan(gamma));
     }
+
+    std::cout << "Computing weights ... DONE !" << std::endl;
 }
 
 double ArapCompute::angleBetweenVectors(const Eigen::Vector3d& a, const Eigen::Vector3d& b)
@@ -121,6 +125,7 @@ Eigen::VectorXi ArapCompute::computeNeighbourVertices(int vertexID){
 
 void ArapCompute::computeLaplaceBeltramiOperator()
 {
+    std::cout << "Compute Laplace-Beltrami Operator ..." << std::endl;
 
     int nVertices = vertices_.rows();
 
@@ -150,21 +155,25 @@ void ArapCompute::computeLaplaceBeltramiOperator()
         std::cout << "Solving the sparse Laplace-Beltrami Operator failed!" << std::endl;
         exit(EXIT_FAILURE);
     }
+    std::cout << "Laplace-Beltrami Operator computed ... DONE !" << std::endl;
 }
 
 void ArapCompute::NaiveLaplaceEditing() {
     // computes the first guess for the vertex transformation $\pmb{p}_0'$ that is the basis for the
     // initial rotation
+    std::cout << "Compute Initial guess ..." << std::endl;
 
     Eigen::VectorXd delta = L_operator * vertices_;
     // solution to $||Lp'-\delta||^2$: p' = (L.transpose * L).inverser()*L.transpose * delta
     vertices_ = (L_operator.transpose() * L_operator).inverse() * L_operator.transpose() * delta;
 
+    std::cout << "Naive Laplacian Editing ... DONE !" << std::endl;
 }
 
 void ArapCompute::ComputeRotations()
 {
-    VERBOSE("Compute rotations ...");
+    std::cout << "Compute rotations ..." << std::endl;
+
 	//check equations (5) and (6) in the paper for computing rotations
 
 	//total number of vertices
@@ -203,19 +212,18 @@ void ArapCompute::ComputeRotations()
 		igl::polar_svd3x3(S_matrix[v], rotation);
 		rotations[v] = rotation.transpose();
 	}
-    VERBOSE("Compute rotations ... DONE!");
+    std::cout << "Compute rotations ... DONE!" << std::endl;
 }
 
 void ArapCompute::ComputeRightHandSide()
 {
-    VERBOSE("Compute right hand side ...");
-
-
+    std::cout << "Compute the right hand side ..." << std::endl;
 
     Eigen::VectorXi neighbours;
+    int nVertices = vertices_.rows();
 
 
-    for (int i = 0; i < (int)m_nVertices; ++i)
+    for (int i = 0; i < nVertices; i++)
     {
         Eigen::Vector3f sum(0.0f, 0.0f, 0.0f);
         for (int idx = 0;idx < neighbours.size(); idx++)
@@ -229,17 +237,19 @@ void ArapCompute::ComputeRightHandSide()
         RHS(i,2) = sum.z();
     }
 
-    VERBOSE("Compute right hand side ... DONE!");
+    std::cout << "Compute right hand side ... DONE!" << std::endl;
 }
 
 
 void ArapCompute::alternatingOptimization()
 {
+    std::cout << "Alternating optimization ..." << std::endl;
+
     for (int iter = 0; iter < maxIterations_; iter++)
     {
 
     }
     // update the vertices
 
-
+    std::cout << "Optimization ... DONE !" >> std::endl;
 }

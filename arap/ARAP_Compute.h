@@ -41,7 +41,7 @@ private:
     const int VertexToEdge_map[3][2] = { {0, 1}, {1, 2}, {2, 0} };
 
     // helper function to compute the angle between to vectors
-    const double angleBetweenVectors(const Eigen::Vector3d& a, const Eigen::Vector3d& b);
+    double angleBetweenVectors(const Eigen::Vector3d& a, const Eigen::Vector3d& b);
 
     // Computes the indices of all the neighbouring vectors for a given vector ID
     // and stores them in a vetor of size N(i).
