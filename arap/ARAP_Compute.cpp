@@ -253,10 +253,24 @@ void ArapCompute::ComputeRightHandSide()
 
 void ArapCompute::UpdateVertices() 
 {
+    //step 1: write down the fixed vertices in the updatedVertices_ matrix
 
+    int nFixed = fixedVertices_Index.size();
+    int nFree = freeVertices_Index.size();
+    int nVertices = vertices_.rows();
+
+    Eigen::SparseMatrix<double> I(nVertices, nVertices);
+    I.setIdentity();   
+    
+    auto L_operator_inv = sparse_solver.solve(I);
+
+    updatedVertices_ = L_operator_inv * RHS;
+
+    for (int v = 0; v < nFixed; v++)
+    {
+        updatedVertices_.row(fixedVertices_Index(v)) = fixedVertices_.row(v);
+    }
 }
-
-
 
 void ArapCompute::alternatingOptimization() {
     std::cout << "Alternating optimization ..." << std::endl;
@@ -269,9 +283,10 @@ void ArapCompute::alternatingOptimization() {
     {
         ComputeRotations();
         ComputeRightHandSide();
+        UpdateVertices();
 
+        vertices_ = updatedVertices_;
     }
-    // update the vertices
 
     std::cout << "Optimization ... DONE !" << std::endl;
 }
