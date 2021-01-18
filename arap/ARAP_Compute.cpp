@@ -8,13 +8,13 @@
 using namespace std;
 
 
-ArapCompute::ArapCompute(const Eigen::MatrixXd& vertices,
-                         const Eigen::VectorXi& fixedVertices,
+ArapCompute::ArapCompute(Eigen::MatrixXd& vertices,
+                         Eigen::VectorXi& fixedVertices,
 	                     const Eigen::MatrixXi& faces, 
-                         const int maxIterations)
+                         int maxIterations)
 	: vertices_(vertices),
       faces_(faces),
-      fixedVertices_(fixedVertices),
+      fixedVertices_Index(fixedVertices),
       maxIterations_(maxIterations){}
 
 void ArapCompute::ComputeWeights()
@@ -174,6 +174,7 @@ void ArapCompute::NaiveLaplaceEditing() {
     auto L_Operator_inv = sparse_solver.solve(I);
 
     Eigen::VectorXd delta = L_operator * vertices_;
+
     // solution to $||Lp'-\delta||^2$: p' = (L.transpose * L).inverser()*L.transpose * delta
     vertices_ = L_Operator_inv * L_operator.transpose() * delta;
 
@@ -189,7 +190,7 @@ void ArapCompute::ComputeRotations()
 	//total number of vertices
 	int nVertices = vertices_.rows();
 
-    Eigen::VectorXd neighbours;
+    Eigen::VectorXi neighbours;
     Eigen::Vector3d restEdge;
     Eigen::Vector3d deformedEdge;
 
@@ -232,15 +233,23 @@ void ArapCompute::ComputeRightHandSide()
 
     Eigen::VectorXi neighbours;
     int nVertices = vertices_.rows();
+    int nFree = freeVertices_Index.size();
 
+    //Initialize the right hand side matrix of equations (8) and (9).
+    RHS = Eigen::MatrixXd::Zero(nFree, 3);
 
-    for (int i = 0; i < nVertices; i++)
+    for (int i = 0; i < nFree; i++)
     {
-        Eigen::Vector3f sum(0.0f, 0.0f, 0.0f);
-        for (int idx = 0;idx < neighbours.size(); idx++)
+        Eigen::Vector3d sum(0.0, 0.0, 0.0);
+
+        for (int idx = 0; idx < neighbours.size(); idx++)
         {
-            unsigned int j = neighbours(idx);
-            sum += weight_.coeff(i,j) / 2.0f * (rotations[i] + rotations[j]) * (vertices_[i] - vertices_[j]);
+            int j = neighbours[idx];
+            Eigen::Vector3d Pi_minus_Pj = vertices_.row(i) - vertices_.row(j);
+            Eigen::Matrix3d Ri_plus_Rj = rotations[i] + rotations[j];
+            double weight = weight_.coeff(i, j) / 2.0;
+
+            sum += weight * (rotations[i] + rotations[j]) * (vertices_.row(i) - vertices_.row(j)).transpose();
         }
 
         RHS(i,0) = sum.x();

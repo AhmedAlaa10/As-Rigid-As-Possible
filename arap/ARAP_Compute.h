@@ -9,7 +9,7 @@ class ArapCompute {
 
 public:
     // Class Constructor
-	ArapCompute(const Eigen::MatrixXd& vertices, const Eigen::VectorXi& fixedVertices,
+	ArapCompute( Eigen::MatrixXd& vertices, Eigen::VectorXi& fixedVertices,
 		const Eigen::MatrixXi& faces, const int maxIterations);
 
 
@@ -87,10 +87,10 @@ private:
 	Eigen::VectorXi freeVertices_Index;
 
 	//maximum no. of iterations used to solve the ARAP problem
-	const int maxIterations_;
+	int maxIterations_;
 
 	//stores all neighborhoods of each vertex
-	std::vector<vertixNeighbors> neighbors_;
+	Eigen::VectorXd neighbors_;
 
 	//A sparse matrix used to store weights
 	//This is a nVertices x nVertices matrix with zero diagonal elements
