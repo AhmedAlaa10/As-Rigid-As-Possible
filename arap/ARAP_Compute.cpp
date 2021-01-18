@@ -25,50 +25,61 @@ void ArapCompute::ComputeWeights()
     int nVertices = vertices_.rows();
     int nFaces = faces_.size();
 
-    int firstVertex;
-    int secondVertex;
-    int thirdVertex;
+    //Initial the weight matrix
+    weight_.resize(nVertices, nVertices);
+    weight_.setZero();
 
-    Eigen::Vector3d A;
-    Eigen::Vector3d B;
-    Eigen::Vector3d C;
-
-	weight_.resize(nVertices, nVertices);
-	weight_.setZero();
     // iterating through each face to work with every single triangle
-    for (int face = 0; face < nFaces; face++) {
+    for (int face = 0; face < nFaces; face++) 
+    {
+        //compute the cotangent vector of the face
+        Eigen::Vector3d cotan = ComputeCotangent(face);
+
         //loop over the three vertices within the face
-        for (int v = 0; v < 3; v++) {
-            //indices and coordinates of each vertex of each face
-            firstVertex = faces_(face, VertexToEdge_map[v][0]);
-            secondVertex = faces_(face, VertexToEdge_map[v][1]);
-            thirdVertex = faces_(face, VertexToEdge_map[v][2]);
+        for (int v = 0; v < 3; v++) 
+        {
+            //indices of the two vertices in the edge
+            int firstVertix = faces_(face, VertexToEdge_map[v][0]);
+            int secondVertix = faces_(face, VertexToEdge_map[v][1]);
 
-            A = vertices_.row(firstVertex);
-            B = vertices_.row(secondVertex);
-            C = vertices_.row(thirdVertex);
+            //in Eigen::SparseMatrix, coeffRef() returns a non-constant reference to the value
+            //of the matrix at position i, j
+            weight_.coeffRef(firstVertix, secondVertix) += cotan(v) / 2.0;
+
+            //since the weight of the edge i-j (edge between vertix(i) and vertix(j) is the same
+            //of the edge j-i, then we assign them the same weight in the weight_ matrix
+            weight_.coeffRef(secondVertix, firstVertix) += cotan(v) / 2.0;
         }
-        // get each angle in the face
-        double alpha = angleBetweenVectors(A - B, A - C);
-        double beta = angleBetweenVectors(B - A, B - C);
-        double gamma = angleBetweenVectors(A - C, B - C);
-
-        /*
-			apply the weighting function to each vertex
-			indexing is according to the paper
-			and set s.t. the matrix is symmetric (weight_ = weight_.transpose
-			*/
-        // weights for the upper half
-        weight_.coeffRef(secondVertex, thirdVertex) += 1 / (2.0 * std::tan(alpha));
-        weight_.coeffRef(firstVertex, thirdVertex)  += 1 / (2.0 * std::tan(beta));
-        weight_.coeffRef(firstVertex, secondVertex) += 1 / (2.0 * std::tan(gamma));
-        // weights for the lower half
-        weight_.coeffRef(thirdVertex, secondVertex) += 1 / (2.0 * std::tan(alpha));
-        weight_.coeffRef(thirdVertex, firstVertex)  += 1 / (2.0 * std::tan(beta));
-        weight_.coeffRef(secondVertex, firstVertex) += 1 / (2.0 * std::tan(gamma));
     }
 
     std::cout << "Computing weights ... DONE !" << std::endl;
+}
+
+Eigen::Vector3d ArapCompute::ComputeCotangent(int face_index) const
+{
+    //inititalize the cotangent vector
+    //REMINDER: the cotangent is the double the per-edge weight in the paper (i.e. Wij = 1/2 * cotangent(i)
+    Eigen::Vector3d cotangent(0.0, 0.0, 0.0);
+
+    //3D positions of the vertices
+    Eigen::Vector3d v1 = vertices_.row(faces_(face_index, 0));
+    Eigen::Vector3d v2 = vertices_.row(faces_(face_index, 1));
+    Eigen::Vector3d v3 = vertices_.row(faces_(face_index, 2));
+
+    //Area of the triangle
+    double area = (v1 - v2).cross(v2 - v3).norm() / 2;
+
+    //the length of the sides squared
+    //let's call the sides a, b, c
+    double v3_squared = (v1 - v2).squaredNorm();
+    double v1_squared = (v2 - v3).squaredNorm();
+    double v2_squared = (v3 - v1).squaredNorm();
+
+    cotangent(0) = (v3_squared + v1_squared - v2_squared) / (4 * area);
+    cotangent(1) = (v2_squared + v1_squared - v3_squared) / (4 * area);
+    cotangent(2) = (v3_squared + v2_squared - v1_squared) / (4 * area);
+
+    return cotangent;
 }
 
 double ArapCompute::angleBetweenVectors(const Eigen::Vector3d& a, const Eigen::Vector3d& b)
@@ -176,7 +187,7 @@ void ArapCompute::NaiveLaplaceEditing() {
     Eigen::VectorXd delta = L_operator * vertices_;
 
     // solution to $||Lp'-\delta||^2$: p' = (L.transpose * L).inverser()*L.transpose * delta
-    vertices_ = L_Operator_inv * L_operator.transpose() * delta;
+    updatedVertices_ = L_Operator_inv * L_operator.transpose() * delta;
 
     std::cout << "Naive Laplacian Editing ... DONE !" << std::endl;
 }
@@ -258,6 +269,36 @@ void ArapCompute::ComputeRightHandSide()
     }
 
     std::cout << "Compute right hand side ... DONE!" << std::endl;
+}
+
+double ArapCompute::ComputeEnergy() 
+{
+    int nVertices = vertices_.rows();
+
+    //Initialize the total energy
+    double total_energy = 0.0;
+
+    //Loop over all vertices
+    for (int v = 0; v < nVertices; v++)
+    {
+        Eigen::VectorXi neighbors = computeNeighbourVertices(v);
+
+        //Loop over all neighbors
+        for (int n = 0; n < neighbors.size(); n++) 
+        {
+            int m = neighbors[n];
+
+            double weight = weight_.coeff(n, m);
+            double edge_energy = 0.0;
+
+            //See equation (7) in the paper
+            Eigen::Vector3d updatedVertices_vector = (cacheVertices_.row(n) - cacheVertices_.row(m)).transpose();
+            Eigen::Vector3d oldVertices_vector = (vertices_.row(n) - vertices_.row(m)).transpose();
+
+            total_energy += weight * (updatedVertices_vector - rotations[n] * oldVertices_vector).squaredNorm();
+        }
+    }
+    return total_energy;
 }
 
 void ArapCompute::UpdateVertices() 
