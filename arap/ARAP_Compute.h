@@ -35,6 +35,8 @@ public:
 
 	void alternatingOptimization();
 
+	void UpdateVertices();
+
 private:
 
     // helper function to map from the vertex to the edge
@@ -64,7 +66,7 @@ private:
 
 		//a total no. of vertices x 3 matrix
 	//each row represents a vertix position
-	const Eigen::MatrixXd vertices_;
+	Eigen::MatrixXd vertices_;
 
 	//stores the output( vertices positions ) of the computeARAP function
 	Eigen::MatrixXd updatedVertices_;

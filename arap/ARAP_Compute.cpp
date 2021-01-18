@@ -163,9 +163,19 @@ void ArapCompute::NaiveLaplaceEditing() {
     // initial rotation
     std::cout << "Compute Initial guess ..." << std::endl;
 
+    int n = vertices_.rows();
+
+    Eigen::SparseMatrix<double> I(n, n);
+    I.setIdentity();
+
+    auto L_trans_L = L_operator.transpose() * L_operator;
+    sparse_solver.compute(L_trans_L);
+
+    auto L_Operator_inv = sparse_solver.solve(I);
+
     Eigen::VectorXd delta = L_operator * vertices_;
     // solution to $||Lp'-\delta||^2$: p' = (L.transpose * L).inverser()*L.transpose * delta
-    vertices_ = (L_operator.transpose() * L_operator).inverse() * L_operator.transpose() * delta;
+    vertices_ = L_Operator_inv * L_operator.transpose() * delta;
 
     std::cout << "Naive Laplacian Editing ... DONE !" << std::endl;
 }
@@ -208,8 +218,9 @@ void ArapCompute::ComputeRotations()
 		//recall equation (6):			R[i] = V[i] * U[i].transpose()
 		//however, polar_svd3x3 outputs R[i] = U[i] * V[i].transpose()
 		//therefore we take the transpose of the output rotation.
+        Eigen::Matrix3d v_Rotation = S_matrix[v];
 
-		igl::polar_svd3x3(S_matrix[v], rotation);
+		igl::polar_svd3x3(v_Rotation, rotation);
 		rotations[v] = rotation.transpose();
 	}
     std::cout << "Compute rotations ... DONE!" << std::endl;
@@ -240,16 +251,27 @@ void ArapCompute::ComputeRightHandSide()
     std::cout << "Compute right hand side ... DONE!" << std::endl;
 }
 
-
-void ArapCompute::alternatingOptimization()
+void ArapCompute::UpdateVertices() 
 {
+
+}
+
+
+
+void ArapCompute::alternatingOptimization() {
     std::cout << "Alternating optimization ..." << std::endl;
+
+    ComputeWeights();
+    computeLaplaceBeltramiOperator();
+    NaiveLaplaceEditing();
 
     for (int iter = 0; iter < maxIterations_; iter++)
     {
+        ComputeRotations();
+        ComputeRightHandSide();
 
     }
     // update the vertices
 
-    std::cout << "Optimization ... DONE !" >> std::endl;
+    std::cout << "Optimization ... DONE !" << std::endl;
 }
