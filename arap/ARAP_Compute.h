@@ -13,14 +13,13 @@ public:
 		const Eigen::MatrixXi& faces, const int maxIterations);
 
 
-    // Function to compute the weights according to the paper ($w_{ij}$) uses the faces and the vertices
+    // Function to compute the weights according to the paper
+	//($w_{ij}$) uses the faces and the vertices
+
     void ComputeWeights();
 
     // Initialization for the starting guess of the vertex shift
     void NaiveLaplaceEditing();
-
-
-
 
 	double ComputeEnergy() const;
 
@@ -32,9 +31,11 @@ public:
 	//However, this area term cancels out and we're left with only the per-edge weights(i.e. cotangents)
 	std::vector<double> ComputeFaceArea(const Eigen::MatrixXi& faces) const;
 
+	void ComputeRightHandSide();
+
+	void alternatingOptimization();
+
 private:
-
-
 
     // helper function to map from the vertex to the edge
     const int VertexToEdge_map[3][2] = { {0, 1}, {1, 2}, {2, 0} };
@@ -49,11 +50,8 @@ private:
     // Computes the Laplace Beltrami Operator used e.g. in equation (9)
     void computeLaplaceBeltramiOperator();
 
-
-
     // Applies the most recent Vertex Rotation to each Cell
-    //void Compute::ComputeRotations();
-
+    void ComputeRotations();
 
 
 	//The Laplace-Beltrami operator

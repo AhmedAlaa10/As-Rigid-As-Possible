@@ -38,10 +38,12 @@ target_include_directories(ceres INTERFACE ${ceres_SOURCE_DIR})
 
 # Set files to be compiled
 set(HEADER_FILES
-        arap/VertexSelectionPlugin.h)
+        arap/VertexSelectionPlugin.h
+        arap/ARAP_Compute.h)
 
 set(SOURCE_FILES
-        arap/VertexSelectionPlugin.cpp)
+        arap/VertexSelectionPlugin.cpp
+        arap/ARAP_Compute.cpp)
 
 add_executable(arap arap/main.cpp ${HEADER_FILES} ${SOURCE_FILES})
 target_link_libraries(arap igl::core igl::opengl igl::opengl_glfw_imgui igl::opengl_glfw ceres)
