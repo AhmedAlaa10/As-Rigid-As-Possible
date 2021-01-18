@@ -53,10 +53,11 @@ bool VertexSelectionPlugin::mouse_down(int button, int modifier) {
     return false;
 }
 
-bool VertexSelectionPlugin::mouse_up(int button, int modifier) {
-    if (button == MOUSE_LEFT && (modifier & MODIFIER_SHIFT) == MODIFIER_SHIFT && this->dragging) {
+bool VertexSelectionPlugin::mouse_move(int button, int modifier) {
+    //if (button == MOUSE_LEFT && (modifier & MODIFIER_SHIFT) == MODIFIER_SHIFT && this->dragging) {
+    if (this->dragging) {
         std::cout << "done some dragging" << std::endl;
-        this->dragging = false;
+        //this->dragging = false;
 
         Eigen::Vector4d vertex_homog = Eigen::Vector4d::Ones();
         vertex_homog.segment<3>(0) = this->viewer->data().V.row(this->drag_vertex_idx);
@@ -79,9 +80,15 @@ bool VertexSelectionPlugin::mouse_up(int button, int modifier) {
     return false;
 }
 
+bool VertexSelectionPlugin::mouse_up (int button, int modifier) {
+    this->dragging = false;
+    return false;
+}
+
+/*
 bool VertexSelectionPlugin::mouse_move(int mouse_x, int mouse_y) {
     if (this->dragging) {
         return true;
     }
     return false;
-}
+}*/
