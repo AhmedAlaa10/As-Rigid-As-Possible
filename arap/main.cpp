@@ -7,7 +7,7 @@
 #include "ARAP_Compute.h"
 #include "Compute.h"
 
-int main() {
+int main(int argc, char** argv) {
     Eigen::MatrixXd V;
     Eigen::MatrixXi F;
 
@@ -18,8 +18,15 @@ int main() {
     Eigen::Vector3d newPosition;
 
 
-    // load the mesh in off format
-    igl::readOFF("../data/bunny.off", V, F);
+    // optional command line argument for different files (or paths)
+    std::string path = argc == 2 ? argv[1] : "../data/bunny.off";
+    
+    // load the mesh in off format, and abort on any read errors (unfortunately, libigl does not seem to
+    // provide any further hints as to what exactly went wrong, so this just prints out a generic usage hint)
+    if (!igl::readOFF(path, V, F)) {
+        std::cout << "usage: " << argv[0] << " [meshfile.off]" << std::endl;
+        return 1;
+    }
 
     // show the mesh in the igl viewer
     igl::opengl::glfw::Viewer viewer;
