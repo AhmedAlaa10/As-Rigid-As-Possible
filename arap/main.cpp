@@ -4,7 +4,7 @@
 #include <igl/winding_number.h>
 
 #include "VertexSelectionPlugin.h"
-#include "Arap_Compute.h"
+#include "ARAP_Compute.h"
 #include "Compute.h"
 
 int main() {
@@ -14,8 +14,8 @@ int main() {
     int currentVertexID;
     // inputs for the ARAP
     int maxIter;
-    Eigen::Vector3d& oldPosition;
-    Eigen::Vector3D& newPosition;
+    Eigen::Vector3d oldPosition;
+    Eigen::Vector3d newPosition;
 
 
     // load the mesh in off format
@@ -24,7 +24,7 @@ int main() {
     // show the mesh in the igl viewer
     igl::opengl::glfw::Viewer viewer;
     VertexSelectionPlugin plugin;
-    Arap ArapPlugin;
+    //Arap ArapPlugin;
     viewer.data().point_size = 20;
 
     plugin.callback_anchor_selected = [&](int vertexID) {
@@ -38,7 +38,7 @@ int main() {
         std::cout << "updating vertex\n" << V.row(vertexID) << "\nto new vertex position\n" << new_position << std::endl;
         V.row(vertexID) = new_position;
         viewer.data().set_vertices(V);
-        newPosition = new_position;
+        //newPosition = new_position;
     };
 /*
 TODO's

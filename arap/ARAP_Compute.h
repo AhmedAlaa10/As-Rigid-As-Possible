@@ -3,6 +3,7 @@
 
 
 #include "Eigen/SparseLU"
+#include "Compute.h"
 
 class ArapCompute {
 
@@ -40,17 +41,17 @@ private:
     const int VertexToEdge_map[3][2] = { {0, 1}, {1, 2}, {2, 0} };
 
     // helper function to compute the angle between to vectors
-    double angleBetweenVectors(const Eigen::Vector3d &a, const Eigen::Vector3d &b);
+    const double angleBetweenVectors(const Eigen::Vector3d& a, const Eigen::Vector3d& b);
 
     // Computes the indices of all the neighbouring vectors for a given vector ID
     // and stores them in a vetor of size N(i).
     Eigen::VectorXi computeNeighbourVertices(int vertexID);
 
     // Computes the Laplace Beltrami Operator used e.g. in equation (9)
-    void ArapCompute::computeLaplaceBeltramiOperator();
+    void computeLaplaceBeltramiOperator();
 
     // Applies the most recent Vertex Rotation to each Cell
-    void ArapCompute::ComputeRotations();
+    void ComputeRotations();
 
 
 	//The Laplace-Beltrami operator
@@ -103,7 +104,7 @@ private:
 	Eigen::MatrixXd RHS;
 };
 
-#endif _ARAP_COMPUTATION_H_
+#endif // _ARAP_COMPUTATION_H_
 
 
 #pragma once
