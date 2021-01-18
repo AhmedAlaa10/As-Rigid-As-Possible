@@ -1,8 +1,11 @@
 #include "ARAP_Compute.h"
+#include <iostream>
 
 #include "igl/slice.h"
 #include "igl/polar_svd.h"
 #include "igl/polar_svd3x3.h"
+
+using namespace std;
 
 
 ArapCompute::ArapCompute(const Eigen::MatrixXd& vertices,
@@ -127,17 +130,26 @@ void ArapCompute::computeLaplaceBeltramiOperator()
 	Eigen::VectorXi neighbours;
 	double finalWeight;
 
-	for (int i=0; i < nVertices; i++){
+	for (int i=0; i < nVertices; i++)
+    {
         neighbours = computeNeighbourVertices(i);
         for (int j=0; i < neighbours.size(); j++){
         finalWeight = weight_.coeff(i,j);
-        L_operator(i,i) += finalWeight;
+        L_operator.coeffRef(i,i) += finalWeight;
         }
 	}
 
 	//for reducing memory consumption
 	//makeCompressed() turns the sparseMatrix L_operator into the Compressed row/col storage form.
 	L_operator.makeCompressed();
+
+    sparse_solver.compute(L_operator);
+
+    if (sparse_solver.info() != Eigen::Success)
+    {
+        std::cout << "Solving the sparse Laplace-Beltrami Operator failed!" << std::endl;
+        exit(EXIT_FAILURE);
+    }
 }
 
 void ArapCompute::NaiveLaplaceEditing() {
