@@ -20,6 +20,14 @@ void ArapCompute::ComputeWeights()
     int nVertices = vertices_.rows();
     int nFaces = faces_.size();
 
+    int firstVertex;
+    int secondVertex;
+    int thirdVertex;
+
+    Eigen::Vector3d A;
+    Eigen::Vector3d B;
+    Eigen::Vector3d C;
+
 	weight_.resize(nVertices, nVertices);
 	weight_.setZero();
     // iterating through each face to work with every single triangle
@@ -27,13 +35,13 @@ void ArapCompute::ComputeWeights()
         //loop over the three vertices within the face
         for (int v = 0; v < 3; v++) {
             //indices and coordinates of each vertex of each face
-            int firstVertex = faces_(face, VertexToEdge_map[v][0]);
-            int secondVertex = faces_(face, VertexToEdge_map[v][1]);
-            int thirdVertex = faces_(face, VertexToEdge_map[v][2]);
+            firstVertex = faces_(face, VertexToEdge_map[v][0]);
+            secondVertex = faces_(face, VertexToEdge_map[v][1]);
+            thirdVertex = faces_(face, VertexToEdge_map[v][2]);
 
-            Eigen::Vector3d A = vertices_.row(firstVertex);
-            Eigen::Vector3d B = vertices_.row(secondVertex);
-            Eigen::Vector3d C = vertices_.row(thirdVertex);
+            A = vertices_.row(firstVertex);
+            B = vertices_.row(secondVertex);
+            C = vertices_.row(thirdVertex);
         }
         // get each angle in the face
         double alpha = angleBetweenVectors(A - B, A - C);
@@ -76,11 +84,18 @@ Eigen::VectorXi ArapCompute::computeNeighbourVertices(int vertexID){
 
     Eigen::VectorXi neighbouringVertices;
 
+    int firstVertex;
+    int secondVertex;
+    int thirdVertex;
+
     for (int face = 0; face < nFaces;)
     {
-        int firstVertex  = faces_(face, VertexToEdge_map[v][0]);
-		int secondVertex = faces_(face, VertexToEdge_map[v][1]);
-        int thirdVertex  = faces_(face, VertexToEdge_map[v][2]);
+        for (int v = 0; v < 3; v++)
+        {
+            firstVertex  = faces_(face, VertexToEdge_map[v][0]);
+            secondVertex = faces_(face, VertexToEdge_map[v][1]);
+            thirdVertex  = faces_(face, VertexToEdge_map[v][2]);
+        }      
 
         if (firstVertex == vertexID)
         {
@@ -142,9 +157,11 @@ void ArapCompute::ComputeRotations()
 
 	//total number of vertices
 	int nVertices = vertices_.rows();
+
     Eigen::VectorXd neighbours;
     Eigen::Vector3d restEdge;
     Eigen::Vector3d deformedEdge;
+
 	//a vector of matrices to hold the products in equation (5) in the paper.
 	//S = per-edge weights * rest edge * deformed edge, summed over all vertices.
 	std::vector<Eigen::MatrixXd> S_matrix;
@@ -154,7 +171,7 @@ void ArapCompute::ComputeRotations()
         neighbours = computeNeighbourVertices(v_1);
 		for (int v_2 = 0; v_2 < neighbours.size(); v_2++)
 		{
-			restEdge = vertices_.row(v_1) - vertices_.row(v_2);
+			restEdge     = vertices_.row(v_1) - vertices_.row(v_2);
 			deformedEdge = updatedVertices_.row(v_1) - updatedVertices_.row(v_2);
 
 			S_matrix[v_1] += weight_.coeff(v_1, v_2) * restEdge * deformedEdge.transpose();
