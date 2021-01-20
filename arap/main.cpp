@@ -39,7 +39,9 @@ int main(int argc, char** argv) {
         viewer.data().add_points(V.row(vertexID), Eigen::RowVector3d(255, 0, 0));
         currentVertexID = vertexID;
     };
-    oldPosition = V.row(currentVertexID);
+
+    //this line down here is causing a problem!
+   // oldPosition = V.row(currentVertexID);
 
     plugin.callback_vertex_dragged = [&](int vertexID, const Eigen::Vector3d& new_position) {
         std::cout << "updating vertex\n" << V.row(vertexID) << "\nto new vertex position\n" << new_position << std::endl;
