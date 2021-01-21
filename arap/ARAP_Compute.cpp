@@ -8,14 +8,44 @@
 using namespace std;
 
 
-ArapCompute::ArapCompute(Eigen::MatrixXd& vertices,
-                         Eigen::VectorXi& fixedVertices,
+ArapCompute::ArapCompute(const Eigen::MatrixXd& vertices,
+                         const Eigen::VectorXi& fixedVertices,
 	                     const Eigen::MatrixXi& faces, 
                          int maxIterations)
 	: vertices_(vertices),
       faces_(faces),
       fixedVertices_Index(fixedVertices),
-      maxIterations_(maxIterations){}
+      maxIterations_(maxIterations){
+
+    //Number of free vertices.
+    int nVertices = vertices_.rows();
+    int nFixed    = fixedVertices_Index.size();
+    int nFree     = nVertices - nFixed;
+
+    //Initialize the vector holding the indices of the free vertices.
+    freeVertices_Index.resize(nFree);
+
+    int i = 0, j = 0;
+    for (int k = 0; k < nVertices; k++) 
+    {
+        if (i < nFixed && k == fixedVertices_Index(i)) 
+        {
+            i++;
+        }
+        else
+        {
+            freeVertices_Index(j) = k;
+            j++;        
+        }
+
+    }
+    //Test these for loops
+    if (i != nFixed || j != nFree) 
+    {
+        std::cout<<"There is a mistake in dimensions of freeVertices and/or fixedVertices"<<std::endl;
+    }
+
+}
 
 void ArapCompute::ComputeWeights()
 {
@@ -82,7 +112,7 @@ Eigen::Vector3d ArapCompute::ComputeCotangent(int face_index) const
     return cotangent;
 }
 
-double ArapCompute::angleBetweenVectors(const Eigen::Vector3d& a, const Eigen::Vector3d& b)
+double ArapCompute::angleBetweenVectors(const Eigen::Vector3d& a, const Eigen::Vector3d& b) const
 {
     double angle = 0.0;
 
@@ -91,68 +121,67 @@ double ArapCompute::angleBetweenVectors(const Eigen::Vector3d& a, const Eigen::V
     return angle;
 }
 
-Eigen::VectorXi ArapCompute::computeNeighbourVertices(int vertexID){
-    // returns a vectors Xi storing the IDs of all the neighbouring vertices to one vertex
-    // in other words the cell related to one vertex
-    // N(i) can be obtained by vertices.size()
-    // TODO
-    // find a more efficient solution
+void ArapCompute::computeNeighbourVertices()
+{
     int nVertices = vertices_.rows();
-    int nFaces = faces_.size();
+    NeighborList.resize(nVertices);
 
-    Eigen::VectorXi neighbouringVertices;
-
-    int firstVertex;
-    int secondVertex;
-    int thirdVertex;
-
-    for (int face = 0; face < nFaces;)
+    for (int face = 0; face < faces_.size(); face++) 
     {
-        for (int v = 0; v < 3; v++)
+        for (int i = 0; i < 3; i++)
         {
-            firstVertex  = faces_(face, VertexToEdge_map[v][0]);
-            secondVertex = faces_(face, VertexToEdge_map[v][1]);
-            thirdVertex  = faces_(face, VertexToEdge_map[v][2]);
-        }      
+            int firstVertex  = faces_(face, VertexToEdge_map[i][0]);
+            int secondVertex = faces_(face, VertexToEdge_map[i][1]);
 
-        if (firstVertex == vertexID)
-        {
-            neighbouringVertices(neighbouringVertices.size() + 1) = secondVertex;
-            neighbouringVertices(neighbouringVertices.size() + 1) = thirdVertex;
-        }
-        else if (secondVertex == vertexID)
-        {
-            neighbouringVertices(neighbouringVertices.size() + 1) = firstVertex;
-            neighbouringVertices(neighbouringVertices.size() + 1) = thirdVertex;
-        }
-        else if (thirdVertex == vertexID)
-        {
-            neighbouringVertices(neighbouringVertices.size() + 1) = secondVertex;
-            neighbouringVertices(neighbouringVertices.size() + 1) = thirdVertex;
+
+            /*
+            *  IMPORTANT
+            * 
+            *  NeighborList is a vector of vector holding the neighbor of each vertex in the mesh
+            *  For each vertex i there corresponds a vector of neighboring vertices.
+            *  each edge in every face has two vertices right, say i and j.
+            *  i and j are neighbor of one another. so i is a neighbor of j and vice versa.
+            *  This is basically what those two line down there mean.            * 
+            *  For vector NeighborList at the row(i) we add the vertex (j) to it's vector of neighboring vertices.
+            * 
+            *  Now, how do we call back the neighbor of vertex i when we need them? This is simple
+            *  first iterate over the vertices: for(int i=0; i<number_of_vertices; i++)
+            *  then iterate over the neighbors: for( int v : NeighborList[i])
+            *  which gives every vertex v neighboring vertex i
+            * 
+            *  I hope i you got this right.
+            */
+            NeighborList[firstVertex].push_back(secondVertex);
+            NeighborList[secondVertex].push_back(firstVertex);
         }
     }
-    return neighbouringVertices;
+   
 }
 
 void ArapCompute::computeLaplaceBeltramiOperator()
 {
     std::cout << "Compute Laplace-Beltrami Operator ..." << std::endl;
 
-    int nVertices = vertices_.rows();
+    int nFree = freeVertices_Index.size();
+    double weight;
 
 	//compute the laplace-beltrami operator
-	L_operator.resize(nVertices, nVertices);
+	L_operator.resize(nFree, nFree);
 
-	Eigen::VectorXi neighbours;
-	double finalWeight;
-
-	for (int i=0; i < nVertices; i++)
+    //Iteratre over the free vertices
+	for (int i=0; i < nFree; i++)
     {
-        neighbours = computeNeighbourVertices(i);
-        for (int j=0; i < neighbours.size(); j++){
-        finalWeight = weight_.coeff(i,j);
-        L_operator.coeffRef(i,i) += finalWeight;
+        //get the index of the free vertex i
+        int j = freeVertices_Index(i);
+
+        //iterate over the neighbors of the vertix i
+        for (auto& neighbor : NeighborList[j])
+        {
+            weight = weight_.coeff(j, neighbor);
+
+            L_operator.coeffRef(i, i) += weight;
         }
+
 	}
 
 	//for reducing memory consumption
@@ -170,7 +199,7 @@ void ArapCompute::computeLaplaceBeltramiOperator()
 }
 
 void ArapCompute::NaiveLaplaceEditing() {
-    // computes the first guess for the vertex transformation $\pmb{p}_0'$ that is the basis for the
+    // computes the first guess for the vertex transformation P'_0 that is the basis for the
     // initial rotation
     std::cout << "Compute Initial guess ..." << std::endl;
 
@@ -186,7 +215,7 @@ void ArapCompute::NaiveLaplaceEditing() {
 
     Eigen::VectorXd delta = L_operator * vertices_;
 
-    // solution to $||Lp'-\delta||^2$: p' = (L.transpose * L).inverser()*L.transpose * delta
+    // solution to ||Lp'-delta||^2 : p' = (L.transpose * L).inverser()*L.transpose * delta
     updatedVertices_ = L_Operator_inv * L_operator.transpose() * delta;
 
     std::cout << "Naive Laplacian Editing ... DONE !" << std::endl;
@@ -209,16 +238,16 @@ void ArapCompute::ComputeRotations()
 	//S = per-edge weights * rest edge * deformed edge, summed over all vertices.
 	std::vector<Eigen::MatrixXd> S_matrix;
 
-	for (int v_1 = 0; v_1 < nVertices; v_1++)
+	for (int i = 0; i < nVertices; i++)
 	{
-        neighbours = computeNeighbourVertices(v_1);
-		for (int v_2 = 0; v_2 < neighbours.size(); v_2++)
-		{
-			restEdge     = vertices_.row(v_1) - vertices_.row(v_2);
-			deformedEdge = updatedVertices_.row(v_1) - updatedVertices_.row(v_2);
+        //Iterate over neighbors of vertex i
+        for (int j : NeighborList[i])
+        {        
+            restEdge     = vertices_.row(i) - vertices_.row(j);
+            deformedEdge = updatedVertices_.row(i) - updatedVertices_.row(j);
 
-			S_matrix[v_1] += weight_.coeff(v_1, v_2) * restEdge * deformedEdge.transpose();
-		}
+            S_matrix[i] += weight_.coeff(i, j) * restEdge * deformedEdge.transpose();
+        }
 
 	}
 
@@ -253,9 +282,9 @@ void ArapCompute::ComputeRightHandSide()
     {
         Eigen::Vector3d sum(0.0, 0.0, 0.0);
 
-        for (int idx = 0; idx < neighbours.size(); idx++)
+        //Iterate over neighbors of vertex i
+        for (int j : NeighborList[i])
         {
-            int j = neighbours[idx];
             Eigen::Vector3d Pi_minus_Pj = vertices_.row(i) - vertices_.row(j);
             Eigen::Matrix3d Ri_plus_Rj = rotations[i] + rotations[j];
             double weight = weight_.coeff(i, j) / 2.0;
@@ -279,23 +308,22 @@ double ArapCompute::ComputeEnergy()
     double total_energy = 0.0;
 
     //Loop over all vertices
-    for (int v = 0; v < nVertices; v++)
+    for (int i = 0; i < nVertices; i++)
     {
-        Eigen::VectorXi neighbors = computeNeighbourVertices(v);
 
         //Loop over all neighbors
-        for (int n = 0; n < neighbors.size(); n++) 
+        for (auto& neighbor: Neighbors_[i]) 
         {
-            int m = neighbors[n];
+            int j = neighbor.first;
 
-            double weight = weight_.coeff(n, m);
+            double weight = weight_.coeff(i, j);
             double edge_energy = 0.0;
 
             //See equation (7) in the paper
-            Eigen::Vector3d updatedVertices_vector = (cacheVertices_.row(n) - cacheVertices_.row(m)).transpose();
-            Eigen::Vector3d oldVertices_vector = (vertices_.row(n) - vertices_.row(m)).transpose();
+            Eigen::Vector3d updatedVertices_vector = (cacheVertices_.row(i) - cacheVertices_.row(j)).transpose();
+            Eigen::Vector3d oldVertices_vector = (vertices_.row(i) - vertices_.row(j)).transpose();
 
-            total_energy += weight * (updatedVertices_vector - rotations[n] * oldVertices_vector).squaredNorm();
+            total_energy += weight * (updatedVertices_vector - rotations[i] * oldVertices_vector).squaredNorm();
         }
     }
     return total_energy;
@@ -326,6 +354,7 @@ void ArapCompute::alternatingOptimization() {
     std::cout << "Alternating optimization ..." << std::endl;
 
     ComputeWeights();
+    computeNeighbourVertices();
     computeLaplaceBeltramiOperator();
     NaiveLaplaceEditing();
 
