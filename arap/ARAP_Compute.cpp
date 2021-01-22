@@ -97,14 +97,14 @@ Eigen::Vector3d ArapCompute::ComputeCotangent(int face_index) const {
     double area = (v1 - v2).cross(v2 - v3).norm() / 2;
 
     //the length of the sides squared
-    //let's call the sides a, b, c
-    double v3_squared = (v1 - v2).squaredNorm();
-    double v1_squared = (v2 - v3).squaredNorm();
-    double v2_squared = (v3 - v1).squaredNorm();
+    //let's call the e1, e2, e3
+    double e3_squared = (v1 - v2).squaredNorm();
+    double e1_squared = (v2 - v3).squaredNorm();
+    double e2_squared = (v3 - v1).squaredNorm();
 
-    cotangent(0) = (v3_squared + v1_squared - v2_squared) / (4 * area);
-    cotangent(1) = (v2_squared + v1_squared - v3_squared) / (4 * area);
-    cotangent(2) = (v3_squared + v2_squared - v1_squared) / (4 * area);
+    cotangent(0) = (e3_squared + e2_squared - e1_squared) / (4 * area);
+    cotangent(1) = (e3_squared + e1_squared - e2_squared) / (4 * area);
+    cotangent(2) = (e2_squared + e1_squared - e3_squared) / (4 * area);
 
     return cotangent;
 }
