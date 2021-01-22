@@ -3,7 +3,6 @@
 
 #include "VertexSelectionPlugin.h"
 #include "ARAP_Compute.h"
-#include "Compute.h"
 
 int main(int argc, char** argv) {
     Eigen::MatrixXd V;
@@ -11,7 +10,7 @@ int main(int argc, char** argv) {
 
     int currentVertexID;
     // inputs for the ARAP
-    int maxIter = 10;
+    int maxIter = 4;
     Eigen::Vector3d oldPosition;
     Eigen::Vector3d newPosition;
 
@@ -29,7 +28,7 @@ int main(int argc, char** argv) {
     igl::opengl::glfw::Viewer viewer;
     VertexSelectionPlugin plugin;
     //Arap ArapPlugin;
-    viewer.data().point_size = 5;
+    viewer.data().point_size = 20;
 
     plugin.callback_anchor_selected = [&](int vertexID) {
         std::cout << "selected an anchor point at " << V.row(vertexID) << std::endl;
@@ -50,14 +49,9 @@ int main(int argc, char** argv) {
     viewer.callback_key_pressed = [&](igl::opengl::glfw::Viewer& viewer, unsigned int key, int modifiers) -> bool {
         if (key == 'i' || key == 'I') {
             std::cout << "computing arap now" << std::endl;
-            int nFixed = 0;
-            Eigen::VectorXi fixed(plugin.fixedPoints.size());
-            for (const auto i : plugin.fixedPoints) {
-                fixed(nFixed) = i;
-                nFixed++;
-            }
-            ArapCompute arap(viewer.data().V, fixed, viewer.data().F, maxIter);
+            ArapCompute arap(viewer.data().V, std::vector<int>(plugin.fixedPoints.begin(), plugin.fixedPoints.end()), viewer.data().F, maxIter);
             arap.alternatingOptimization();
+            viewer.data().set_vertices(arap.getVertices());
             return true;
         }
 

@@ -8,53 +8,47 @@
 using namespace std;
 
 
-ArapCompute::ArapCompute(const Eigen::MatrixXd& vertices,
-                         const Eigen::VectorXi& fixedVertices,
-	                     const Eigen::MatrixXi& faces, 
+ArapCompute::ArapCompute(const Eigen::MatrixXd &vertices,
+                         const std::vector<int> &fixedVertices,
+                         const Eigen::MatrixXi &faces,
                          int maxIterations)
-	: vertices_(vertices),
-      faces_(faces),
-      fixedVertices_Index(fixedVertices),
-      maxIterations_(maxIterations),
-      rotations(vertices.rows()),
-      fixedVertices_(fixedVertices.rows(), 3){
+        : vertices_(vertices),
+          faces_(faces),
+          fixedVertices_Index(fixedVertices),
+          maxIterations_(maxIterations),
+          rotations(vertices.rows()),
+          fixedVertices_(fixedVertices.size(), 3) {
 
     //Number of free vertices.
     int nVertices = vertices_.rows();
-    int nFixed    = fixedVertices_Index.size();
-    int nFree     = nVertices - nFixed;
+    int nFixed = fixedVertices_Index.size();
+    int nFree = nVertices - nFixed;
 
     //Initialize the vector holding the indices of the free vertices.
     freeVertices_Index.resize(nFree);
 
-    for (int i = 0; i < fixedVertices.rows(); i++) {
-        fixedVertices_.row(i) = vertices_.row(fixedVertices_Index(i));
+    for (int i = 0; i < fixedVertices.size(); i++) {
+        fixedVertices_.row(i) = vertices_.row(fixedVertices_Index[i]);
     }
 
     int i = 0, j = 0;
-    for (int k = 0; k < nVertices; k++)
-    {
-        if (i < nFixed && k == fixedVertices_Index(i))
-        {
+    for (int k = 0; k < nVertices; k++) {
+        if (i < nFixed && k == fixedVertices_Index[i]) {
             i++;
-        }
-        else
-        {
-            freeVertices_Index(j) = k;
+        } else {
+            freeVertices_Index[j] = k;
             j++;
         }
 
     }
     //Test these for loops
-    if (i != nFixed || j != nFree)
-    {
-        std::cout<<"There is a mistake in dimensions of freeVertices and/or fixedVertices"<<std::endl;
+    if (i != nFixed || j != nFree) {
+        std::cout << "There is a mistake in dimensions of freeVertices and/or fixedVertices" << std::endl;
     }
 
 }
 
-void ArapCompute::ComputeWeights()
-{
+void ArapCompute::ComputeWeights() {
     std::cout << "Computing weights ..." << std::endl;
 
     //compute weights
@@ -66,14 +60,12 @@ void ArapCompute::ComputeWeights()
     weight_.setZero();
 
     // iterating through each face to work with every single triangle
-    for (int face = 0; face < nFaces; face++)
-    {
+    for (int face = 0; face < nFaces; face++) {
         //compute the cotangent vector of the face
         Eigen::Vector3d cotan = ComputeCotangent(face);
 
         //loop over the three vertices within the face
-        for (int v = 0; v < 3; v++)
-        {
+        for (int v = 0; v < 3; v++) {
             //indices of the two vertices in the edge
             int firstVertix = faces_(face, VertexToEdge_map[v][0]);
             int secondVertix = faces_(face, VertexToEdge_map[v][1]);
@@ -91,8 +83,7 @@ void ArapCompute::ComputeWeights()
     std::cout << "Computing weights ... DONE !" << std::endl;
 }
 
-Eigen::Vector3d ArapCompute::ComputeCotangent(int face_index) const
-{
+Eigen::Vector3d ArapCompute::ComputeCotangent(int face_index) const {
     //inititalize the cotangent vector
     //REMINDER: the cotangent is the double the per-edge weight in the paper (i.e. Wij = 1/2 * cotangent(i)
     Eigen::Vector3d cotangent(0.0, 0.0, 0.0);
@@ -118,8 +109,7 @@ Eigen::Vector3d ArapCompute::ComputeCotangent(int face_index) const
     return cotangent;
 }
 
-double ArapCompute::angleBetweenVectors(const Eigen::Vector3d& a, const Eigen::Vector3d& b) const
-{
+double ArapCompute::angleBetweenVectors(const Eigen::Vector3d &a, const Eigen::Vector3d &b) const {
     double angle = 0.0;
 
     angle = std::atan2(a.cross(b).norm(), a.dot(b));
@@ -127,17 +117,14 @@ double ArapCompute::angleBetweenVectors(const Eigen::Vector3d& a, const Eigen::V
     return angle;
 }
 
-void ArapCompute::computeNeighbourVertices()
-{
+void ArapCompute::computeNeighbourVertices() {
     std::cout << "computing neighboring vertices" << std::endl;
     int nVertices = vertices_.rows();
     NeighborList.resize(nVertices);
 
-    for (int face = 0; face < faces_.rows(); face++)
-    {
-        for (int i = 0; i < 3; i++)
-        {
-            int firstVertex  = faces_(face, VertexToEdge_map[i][0]);
+    for (int face = 0; face < faces_.rows(); face++) {
+        for (int i = 0; i < 3; i++) {
+            int firstVertex = faces_(face, VertexToEdge_map[i][0]);
             int secondVertex = faces_(face, VertexToEdge_map[i][1]);
 
 
@@ -165,44 +152,39 @@ void ArapCompute::computeNeighbourVertices()
 
 }
 
-void ArapCompute::computeLaplaceBeltramiOperator()
-{
+void ArapCompute::computeLaplaceBeltramiOperator() {
     std::cout << "Compute Laplace-Beltrami Operator ..." << std::endl;
 
     int nVertices = vertices_.rows();
     double weight;
 
-	//compute the laplace-beltrami operator
-	L_operator.resize(nVertices, nVertices);
+    //compute the laplace-beltrami operator
+    L_operator.resize(nVertices, nVertices);
+    L_operator.setZero();
 
     // Iteratre over all vertices
-	for (int i=0; i < nVertices; i++)
-    {
+    for (int i = 0; i < nVertices; i++) {
         //get the index of the free vertex i
         //iterate over the neighbors of the vertix i
-        for (auto& neighbor : NeighborList[i])
-        {
-            weight = weight_.coeff(i, neighbor);
+        if (std::find(fixedVertices_Index.begin(), fixedVertices_Index.end(), i) != fixedVertices_Index.end()) {
+            L_operator.coeffRef(i, i) = 1.0;
+        } else {
+            for (auto &neighbor : NeighborList[i]) {
+                weight = weight_.coeff(i, neighbor);
 
-            L_operator.coeffRef(i, i) += weight;
-            L_operator.coeffRef(i, neighbor) = -weight;
+                L_operator.coeffRef(i, i) += weight;
+                L_operator.coeffRef(i, neighbor) = -weight;
+            }
         }
+    }
 
-	}
-
-	for (int i = 0; i < fixedVertices_Index.rows(); i++) {
-	    const auto k = fixedVertices_Index(i);
-	    L_operator.coeffRef(k, k) = 0;
-	}
-
-	//for reducing memory consumption
-	//makeCompressed() turns the sparseMatrix L_operator into the Compressed row/col storage form.
-	L_operator.makeCompressed();
+    //for reducing memory consumption
+    //makeCompressed() turns the sparseMatrix L_operator into the Compressed row/col storage form.
+    L_operator.makeCompressed();
 
     sparse_solver.compute(L_operator);
 
-    if (sparse_solver.info() != Eigen::Success)
-    {
+    if (sparse_solver.info() != Eigen::Success) {
         std::cout << "Solving the sparse Laplace-Beltrami Operator failed!" << std::endl;
         exit(EXIT_FAILURE);
     }
@@ -232,55 +214,50 @@ void ArapCompute::NaiveLaplaceEditing() {
     std::cout << "Naive Laplacian Editing ... DONE !" << std::endl;
 }
 
-void ArapCompute::ComputeRotations()
-{
+void ArapCompute::ComputeRotations() {
     std::cout << "Compute rotations ..." << std::endl;
 
-	//check equations (5) and (6) in the paper for computing rotations
+    //check equations (5) and (6) in the paper for computing rotations
 
-	//total number of vertices
-	int nVertices = vertices_.rows();
+    //total number of vertices
+    int nVertices = vertices_.rows();
 
     Eigen::VectorXi neighbours;
     Eigen::Vector3d restEdge;
     Eigen::Vector3d deformedEdge;
 
-	//a vector of matrices to hold the products in equation (5) in the paper.
-	//S = per-edge weights * rest edge * deformed edge, summed over all vertices.
-	std::vector<Eigen::Matrix3d> S_matrix;
+    //a vector of matrices to hold the products in equation (5) in the paper.
+    //S = per-edge weights * rest edge * deformed edge, summed over all vertices.
+    std::vector<Eigen::Matrix3d> S_matrix;
 
-	for (int i = 0; i < nVertices; i++)
-	{
-	    Eigen::Matrix3d rotMatrix = Eigen::Matrix3d::Zero();
+    for (int i = 0; i < nVertices; i++) {
+        Eigen::Matrix3d rotMatrix = Eigen::Matrix3d::Zero();
         //Iterate over neighbors of vertex i
-        for (int j : NeighborList[i])
-        {
-            restEdge     = vertices_.row(i) - vertices_.row(j);
+        for (int j : NeighborList[i]) {
+            restEdge = vertices_.row(i) - vertices_.row(j);
             deformedEdge = updatedVertices_.row(i) - updatedVertices_.row(j);
 
             rotMatrix += weight_.coeff(i, j) * restEdge * deformedEdge.transpose();
         }
         S_matrix.emplace_back(rotMatrix);
-	}
+    }
 
-	for (int v = 0; v < nVertices; v++)
-	{
-		Eigen::Matrix3d rotation;
+    for (int v = 0; v < nVertices; v++) {
+        Eigen::Matrix3d rotation;
 
-		//polar_svd3x3 computes the polar decomposition (U, V) of a matrix using SVD
-		//recall equation (6):			R[i] = V[i] * U[i].transpose()
-		//however, polar_svd3x3 outputs R[i] = U[i] * V[i].transpose()
-		//therefore we take the transpose of the output rotation.
+        //polar_svd3x3 computes the polar decomposition (U, V) of a matrix using SVD
+        //recall equation (6):			R[i] = V[i] * U[i].transpose()
+        //however, polar_svd3x3 outputs R[i] = U[i] * V[i].transpose()
+        //therefore we take the transpose of the output rotation.
         Eigen::Matrix3d v_Rotation = S_matrix[v];
 
-		igl::polar_svd3x3(v_Rotation, rotation);
-		rotations[v] = rotation.transpose();
-	}
+        igl::polar_svd3x3(v_Rotation, rotation);
+        rotations[v] = rotation.transpose();
+    }
     std::cout << "Compute rotations ... DONE!" << std::endl;
 }
 
-void ArapCompute::ComputeRightHandSide()
-{
+void ArapCompute::ComputeRightHandSide() {
     std::cout << "Compute the right hand side ..." << std::endl;
 
     Eigen::VectorXi neighbours;
@@ -289,13 +266,11 @@ void ArapCompute::ComputeRightHandSide()
     //Initialize the right hand side matrix of equations (8) and (9).
     RHS = Eigen::MatrixXd::Zero(nVertices, 3);
 
-    for (int i = 0; i < nVertices; i++)
-    {
+    for (int i = 0; i < nVertices; i++) {
         Eigen::Vector3d sum(0.0, 0.0, 0.0);
 
         //Iterate over neighbors of vertex i
-        for (int j : NeighborList[i])
-        {
+        for (int j : NeighborList[i]) {
             Eigen::Vector3d Pi_minus_Pj = vertices_.row(i) - vertices_.row(j);
             Eigen::Matrix3d Ri_plus_Rj = rotations[i] + rotations[j];
             double weight = weight_.coeff(i, j) / 2.0;
@@ -303,32 +278,30 @@ void ArapCompute::ComputeRightHandSide()
             sum += weight * (rotations[i] + rotations[j]) * (vertices_.row(i) - vertices_.row(j)).transpose();
         }
 
-        RHS(i,0) = sum.x();
-        RHS(i,1) = sum.y();
-        RHS(i,2) = sum.z();
+        RHS(i, 0) = sum.x();
+        RHS(i, 1) = sum.y();
+        RHS(i, 2) = sum.z();
     }
 
-    for (int i = 0; i < fixedVertices_Index.rows(); i++) {
-        RHS.row(i) = fixedVertices_.row(i);
+    for (int i = 0; i < fixedVertices_Index.size(); i++) {
+        auto k = fixedVertices_Index[i];
+        RHS.row(k) = fixedVertices_.row(i);
     }
 
     std::cout << "Compute right hand side ... DONE!" << std::endl;
 }
 
-double ArapCompute::ComputeEnergy()
-{
+double ArapCompute::ComputeEnergy() {
     int nVertices = vertices_.rows();
 
     //Initialize the total energy
     double total_energy = 0.0;
 
     //Loop over all vertices
-    for (int i = 0; i < nVertices; i++)
-    {
+    for (int i = 0; i < nVertices; i++) {
 
         //Loop over all neighbors
-        for (auto& neighbor: Neighbors_[i])
-        {
+        for (auto &neighbor: Neighbors_[i]) {
             int j = neighbor.first;
 
             double weight = weight_.coeff(i, j);
@@ -344,12 +317,9 @@ double ArapCompute::ComputeEnergy()
     return total_energy;
 }
 
-void ArapCompute::UpdateVertices()
-{
+void ArapCompute::UpdateVertices() {
     //step 1: write down the fixed vertices in the updatedVertices_ matrix
 
-    int nFixed = fixedVertices_Index.size();
-    int nFree = freeVertices_Index.size();
     int nVertices = vertices_.rows();
 
     Eigen::SparseMatrix<double> I(nVertices, nVertices);
@@ -357,12 +327,12 @@ void ArapCompute::UpdateVertices()
 
     auto L_operator_inv = sparse_solver.solve(I);
 
-    updatedVertices_ = L_operator_inv * RHS;
+    vertices_ = L_operator_inv * RHS;
 
-    for (int v = 0; v < nFixed; v++)
-    {
-        updatedVertices_.row(fixedVertices_Index(v)) = fixedVertices_.row(v);
-    }
+//    for (int v = 0; v < nFixed; v++)
+//    {
+//        vertices_.row(fixedVertices_Index(v)) = fixedVertices_.row(v);
+//    }
 }
 
 void ArapCompute::alternatingOptimization() {
@@ -373,13 +343,10 @@ void ArapCompute::alternatingOptimization() {
     computeLaplaceBeltramiOperator();
     NaiveLaplaceEditing();
 
-    for (int iter = 0; iter < maxIterations_; iter++)
-    {
+    for (int iter = 0; iter < maxIterations_; iter++) {
         ComputeRotations();
         ComputeRightHandSide();
         UpdateVertices();
-
-        vertices_ = updatedVertices_;
     }
 
     std::cout << "Optimization ... DONE !" << std::endl;
