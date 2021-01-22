@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
     igl::opengl::glfw::Viewer viewer;
     VertexSelectionPlugin plugin;
     //Arap ArapPlugin;
-    viewer.data().point_size = 20;
+    viewer.data().point_size = 5;
 
     plugin.callback_anchor_selected = [&](int vertexID) {
         std::cout << "selected an anchor point at " << V.row(vertexID) << std::endl;

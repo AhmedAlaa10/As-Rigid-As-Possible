@@ -16,7 +16,8 @@ ArapCompute::ArapCompute(const Eigen::MatrixXd& vertices,
       faces_(faces),
       fixedVertices_Index(fixedVertices),
       maxIterations_(maxIterations),
-      rotations(vertices.rows()){
+      rotations(vertices.rows()),
+      fixedVertices_(fixedVertices.rows(), 3){
 
     //Number of free vertices.
     int nVertices = vertices_.rows();
@@ -25,6 +26,10 @@ ArapCompute::ArapCompute(const Eigen::MatrixXd& vertices,
 
     //Initialize the vector holding the indices of the free vertices.
     freeVertices_Index.resize(nFree);
+
+    for (int i = 0; i < fixedVertices.rows(); i++) {
+        fixedVertices_.row(i) = vertices_.row(fixedVertices_Index(i));
+    }
 
     int i = 0, j = 0;
     for (int k = 0; k < nVertices; k++)
@@ -164,26 +169,30 @@ void ArapCompute::computeLaplaceBeltramiOperator()
 {
     std::cout << "Compute Laplace-Beltrami Operator ..." << std::endl;
 
-    int nFree = freeVertices_Index.size();
+    int nVertices = vertices_.rows();
     double weight;
 
 	//compute the laplace-beltrami operator
-	L_operator.resize(nFree, nFree);
+	L_operator.resize(nVertices, nVertices);
 
-    //Iteratre over the free vertices
-	for (int i=0; i < nFree; i++)
+    // Iteratre over all vertices
+	for (int i=0; i < nVertices; i++)
     {
         //get the index of the free vertex i
-        int j = freeVertices_Index(i);
-
         //iterate over the neighbors of the vertix i
-        for (auto& neighbor : NeighborList[j])
+        for (auto& neighbor : NeighborList[i])
         {
-            weight = weight_.coeff(j, neighbor);
+            weight = weight_.coeff(i, neighbor);
 
             L_operator.coeffRef(i, i) += weight;
+            L_operator.coeffRef(i, neighbor) = -weight;
         }
 
+	}
+
+	for (int i = 0; i < fixedVertices_Index.rows(); i++) {
+	    const auto k = fixedVertices_Index(i);
+	    L_operator.coeffRef(k, k) = 0;
 	}
 
 	//for reducing memory consumption
@@ -276,12 +285,11 @@ void ArapCompute::ComputeRightHandSide()
 
     Eigen::VectorXi neighbours;
     int nVertices = vertices_.rows();
-    int nFree = freeVertices_Index.size();
 
     //Initialize the right hand side matrix of equations (8) and (9).
-    RHS = Eigen::MatrixXd::Zero(nFree, 3);
+    RHS = Eigen::MatrixXd::Zero(nVertices, 3);
 
-    for (int i = 0; i < nFree; i++)
+    for (int i = 0; i < nVertices; i++)
     {
         Eigen::Vector3d sum(0.0, 0.0, 0.0);
 
@@ -298,6 +306,10 @@ void ArapCompute::ComputeRightHandSide()
         RHS(i,0) = sum.x();
         RHS(i,1) = sum.y();
         RHS(i,2) = sum.z();
+    }
+
+    for (int i = 0; i < fixedVertices_Index.rows(); i++) {
+        RHS.row(i) = fixedVertices_.row(i);
     }
 
     std::cout << "Compute right hand side ... DONE!" << std::endl;
