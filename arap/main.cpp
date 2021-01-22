@@ -51,9 +51,9 @@ int main(int argc, char** argv) {
         if (key == 'i' || key == 'I') {
             std::cout << "computing arap now" << std::endl;
             int nFixed = 0;
-            Eigen::VectorXi fixed;
+            Eigen::VectorXi fixed(plugin.fixedPoints.size());
             for (const auto i : plugin.fixedPoints) {
-                fixed[nFixed] = i;
+                fixed(nFixed) = i;
                 nFixed++;
             }
             ArapCompute arap(viewer.data().V, fixed, viewer.data().F, maxIter);

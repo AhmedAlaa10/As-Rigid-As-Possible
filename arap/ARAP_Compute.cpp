@@ -15,7 +15,8 @@ ArapCompute::ArapCompute(const Eigen::MatrixXd& vertices,
 	: vertices_(vertices),
       faces_(faces),
       fixedVertices_Index(fixedVertices),
-      maxIterations_(maxIterations){
+      maxIterations_(maxIterations),
+      rotations(vertices.rows()){
 
     //Number of free vertices.
     int nVertices = vertices_.rows();
@@ -214,7 +215,7 @@ void ArapCompute::NaiveLaplaceEditing() {
 
     auto L_Operator_inv = sparse_solver.solve(I);
 
-    Eigen::VectorXd delta = L_operator * vertices_;
+    Eigen::MatrixXd delta = L_operator * vertices_;
 
     // solution to ||Lp'-delta||^2 : p' = (L.transpose * L).inverser()*L.transpose * delta
     updatedVertices_ = L_Operator_inv * L_operator.transpose() * delta;
@@ -237,19 +238,20 @@ void ArapCompute::ComputeRotations()
 
 	//a vector of matrices to hold the products in equation (5) in the paper.
 	//S = per-edge weights * rest edge * deformed edge, summed over all vertices.
-	std::vector<Eigen::MatrixXd> S_matrix;
+	std::vector<Eigen::Matrix3d> S_matrix;
 
 	for (int i = 0; i < nVertices; i++)
 	{
+	    Eigen::Matrix3d rotMatrix = Eigen::Matrix3d::Zero();
         //Iterate over neighbors of vertex i
         for (int j : NeighborList[i])
         {
             restEdge     = vertices_.row(i) - vertices_.row(j);
             deformedEdge = updatedVertices_.row(i) - updatedVertices_.row(j);
 
-            S_matrix[i] += weight_.coeff(i, j) * restEdge * deformedEdge.transpose();
+            rotMatrix += weight_.coeff(i, j) * restEdge * deformedEdge.transpose();
         }
-
+        S_matrix.emplace_back(rotMatrix);
 	}
 
 	for (int v = 0; v < nVertices; v++)
