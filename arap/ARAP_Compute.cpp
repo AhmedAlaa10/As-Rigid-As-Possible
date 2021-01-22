@@ -26,21 +26,21 @@ ArapCompute::ArapCompute(const Eigen::MatrixXd& vertices,
     freeVertices_Index.resize(nFree);
 
     int i = 0, j = 0;
-    for (int k = 0; k < nVertices; k++) 
+    for (int k = 0; k < nVertices; k++)
     {
-        if (i < nFixed && k == fixedVertices_Index(i)) 
+        if (i < nFixed && k == fixedVertices_Index(i))
         {
             i++;
         }
         else
         {
             freeVertices_Index(j) = k;
-            j++;        
+            j++;
         }
 
     }
     //Test these for loops
-    if (i != nFixed || j != nFree) 
+    if (i != nFixed || j != nFree)
     {
         std::cout<<"There is a mistake in dimensions of freeVertices and/or fixedVertices"<<std::endl;
     }
@@ -53,20 +53,20 @@ void ArapCompute::ComputeWeights()
 
     //compute weights
     int nVertices = vertices_.rows();
-    int nFaces = faces_.size();
+    int nFaces = faces_.rows();
 
     //Initial the weight matrix
     weight_.resize(nVertices, nVertices);
     weight_.setZero();
 
     // iterating through each face to work with every single triangle
-    for (int face = 0; face < nFaces; face++) 
+    for (int face = 0; face < nFaces; face++)
     {
         //compute the cotangent vector of the face
         Eigen::Vector3d cotan = ComputeCotangent(face);
 
         //loop over the three vertices within the face
-        for (int v = 0; v < 3; v++) 
+        for (int v = 0; v < 3; v++)
         {
             //indices of the two vertices in the edge
             int firstVertix = faces_(face, VertexToEdge_map[v][0]);
@@ -123,10 +123,11 @@ double ArapCompute::angleBetweenVectors(const Eigen::Vector3d& a, const Eigen::V
 
 void ArapCompute::computeNeighbourVertices()
 {
+    std::cout << "computing neighboring vertices" << std::endl;
     int nVertices = vertices_.rows();
     NeighborList.resize(nVertices);
 
-    for (int face = 0; face < faces_.size(); face++) 
+    for (int face = 0; face < faces_.rows(); face++)
     {
         for (int i = 0; i < 3; i++)
         {
@@ -136,26 +137,26 @@ void ArapCompute::computeNeighbourVertices()
 
             /*
             *  IMPORTANT
-            * 
+            *
             *  NeighborList is a vector of vector holding the neighbor of each vertex in the mesh
             *  For each vertex i there corresponds a vector of neighboring vertices.
             *  each edge in every face has two vertices right, say i and j.
             *  i and j are neighbor of one another. so i is a neighbor of j and vice versa.
-            *  This is basically what those two line down there mean.            * 
+            *  This is basically what those two line down there mean.            *
             *  For vector NeighborList at the row(i) we add the vertex (j) to it's vector of neighboring vertices.
-            * 
+            *
             *  Now, how do we call back the neighbor of vertex i when we need them? This is simple
             *  first iterate over the vertices: for(int i=0; i<number_of_vertices; i++)
             *  then iterate over the neighbors: for( int v : NeighborList[i])
             *  which gives every vertex v neighboring vertex i
-            * 
+            *
             *  I hope i you got this right.
             */
             NeighborList[firstVertex].push_back(secondVertex);
             NeighborList[secondVertex].push_back(firstVertex);
         }
     }
-   
+
 }
 
 void ArapCompute::computeLaplaceBeltramiOperator()
@@ -242,7 +243,7 @@ void ArapCompute::ComputeRotations()
 	{
         //Iterate over neighbors of vertex i
         for (int j : NeighborList[i])
-        {        
+        {
             restEdge     = vertices_.row(i) - vertices_.row(j);
             deformedEdge = updatedVertices_.row(i) - updatedVertices_.row(j);
 
@@ -300,7 +301,7 @@ void ArapCompute::ComputeRightHandSide()
     std::cout << "Compute right hand side ... DONE!" << std::endl;
 }
 
-double ArapCompute::ComputeEnergy() 
+double ArapCompute::ComputeEnergy()
 {
     int nVertices = vertices_.rows();
 
@@ -312,7 +313,7 @@ double ArapCompute::ComputeEnergy()
     {
 
         //Loop over all neighbors
-        for (auto& neighbor: Neighbors_[i]) 
+        for (auto& neighbor: Neighbors_[i])
         {
             int j = neighbor.first;
 
@@ -329,7 +330,7 @@ double ArapCompute::ComputeEnergy()
     return total_energy;
 }
 
-void ArapCompute::UpdateVertices() 
+void ArapCompute::UpdateVertices()
 {
     //step 1: write down the fixed vertices in the updatedVertices_ matrix
 
@@ -338,8 +339,8 @@ void ArapCompute::UpdateVertices()
     int nVertices = vertices_.rows();
 
     Eigen::SparseMatrix<double> I(nVertices, nVertices);
-    I.setIdentity();   
-    
+    I.setIdentity();
+
     auto L_operator_inv = sparse_solver.solve(I);
 
     updatedVertices_ = L_operator_inv * RHS;

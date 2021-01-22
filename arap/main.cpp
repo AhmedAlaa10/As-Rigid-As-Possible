@@ -1,7 +1,5 @@
 #include <igl/opengl/glfw/Viewer.h>
-#include <igl/project.h>
 #include <igl/readOFF.h>
-#include <igl/winding_number.h>
 
 #include "VertexSelectionPlugin.h"
 #include "ARAP_Compute.h"
@@ -16,7 +14,6 @@ int main(int argc, char** argv) {
     int maxIter = 10;
     Eigen::Vector3d oldPosition;
     Eigen::Vector3d newPosition;
-
 
     // optional command line argument for different files (or paths)
     std::string path = argc == 2 ? argv[1] : "../data/bunny.off";
@@ -49,19 +46,23 @@ int main(int argc, char** argv) {
         viewer.data().set_vertices(V);
         //newPosition = new_position;
     };
-/*
-TODO's
-define object of type Arap_compute
-gothrough: compute weights (y->get the indexing straight) -> compute neighbours(y) -> compute L -> compute Initial Guess -> compute initial Rotation -> alternating optimization -> apply final rotation to cells
-\detla = L * p
-initial guess: min||L*p' = \delta||^2
-initialize primary variables
-prefactorize (compute cells vertices, weights, prefactor system matrix, initialRotation)
-compute new positions(=p_i[->solve Lp' = b]) and update Rotation(=R_i=V_iU_i^T) iteratively
-apply final rotation
-*/
 
+    viewer.callback_key_pressed = [&](igl::opengl::glfw::Viewer& viewer, unsigned int key, int modifiers) -> bool {
+        if (key == 'i' || key == 'I') {
+            std::cout << "computing arap now" << std::endl;
+            int nFixed = 0;
+            Eigen::VectorXi fixed;
+            for (const auto i : plugin.fixedPoints) {
+                fixed[nFixed] = i;
+                nFixed++;
+            }
+            ArapCompute arap(viewer.data().V, fixed, viewer.data().F, maxIter);
+            arap.alternatingOptimization();
+            return true;
+        }
 
+        return false;
+    };
 
     viewer.plugins.push_back(&plugin);
     viewer.data().set_mesh(V, F);

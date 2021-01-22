@@ -1,6 +1,4 @@
-#ifndef _ARAP_COMPUTATION_H_
-#define _ARAP_COMPUTATION_H_
-
+#pragma once
 
 #include "Eigen/SparseLU"
 #include "Compute.h"
@@ -8,7 +6,7 @@
 
 typedef std::unordered_map<int, int> Map;
 
-class ArapCompute 
+class ArapCompute
 {
 
 public:
@@ -27,7 +25,7 @@ public:
 	void UpdateVertices();
 
 	//Computes the Laplace Beltrami Operator used e.g. in equation (9)
-    void computeLaplaceBeltramiOperator();	
+    void computeLaplaceBeltramiOperator();
 
     //Initialization for the starting guess of the vertex shift
     void NaiveLaplaceEditing();
@@ -60,10 +58,10 @@ private:
 	*  Computes the indices of all the neighbouring vectors for a given vector ID
     *  and stores them in a vetor of size N(i).
 	*/
-    void computeNeighbourVertices();				
+    void computeNeighbourVertices();
 
 	//The Laplace-Beltrami operator
-	Eigen::SparseMatrix<double> L_operator;	
+	Eigen::SparseMatrix<double> L_operator;
 
 	/*
 	*  Sparse Linear Solver
@@ -73,12 +71,12 @@ private:
 	Eigen::SparseLU<Eigen::SparseMatrix<double>> sparse_solver;
 
 	//A total no. of vertices x 3 matrix, each row represents a vertix position
-	Eigen::MatrixXd vertices_;				
+	Eigen::MatrixXd vertices_;
 
 	//Stores the output( vertices positions ) of the computeARAP function
-	Eigen::MatrixXd updatedVertices_;		
+	Eigen::MatrixXd updatedVertices_;
 
-	/* 
+	/*
 	*  stores the new calculated vertices
 	*  used in ComputeEnergy
 	*  if the computed energy is smaller than the previous energy calculated,
@@ -94,7 +92,7 @@ private:
 	*/
 	const Eigen::MatrixXi faces_;
 
-	/* 
+	/*
 	*  ixedVertices_Index is a vector of the indices of the vertices we want to fix during the deformation.
 	*  the fixed vertices are defined by the interacting user.
 	*/
@@ -115,7 +113,7 @@ private:
 	//A vector of map to store neighbors
 	std::vector<Map> Neighbors_;
 
-	/* 
+	/*
 	*  A sparse matrix used to store weights
 	*  This is a nVertices x nVertices matrix with zero diagonal elements
 	*  since the element i-j s.t. i=j is a not an edge but a point
@@ -138,8 +136,3 @@ inline const Eigen::MatrixXd& ArapCompute::getUpdatedVertices() const
 {
     return updatedVertices_;
 }
-
-#endif // _ARAP_COMPUTATION_H_
-
-
-#pragma once

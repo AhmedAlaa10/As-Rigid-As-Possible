@@ -27,19 +27,19 @@ class VertexSelectionPlugin : public igl::opengl::glfw::ViewerPlugin {
     std::function<void(int)> callback_anchor_selected;
     std::function<void(int, Eigen::Vector3d)> callback_vertex_dragged;
     VertexSelectionPlugin() = default;
+    void reset();
 
     IGL_INLINE bool mouse_down(int button, int modifier) override;
     IGL_INLINE bool mouse_up(int button, int modifier) override;
     IGL_INLINE bool mouse_move(int mouse_x, int mouse_y) override;
 
+    std::set<int> fixedPoints;
   private:
     std::vector<Eigen::RowVector2f> L;
     Eigen::VectorXd W;
     Eigen::Array<double, Eigen::Dynamic, 1> and_visible;
     bool dragging = false;
     int drag_vertex_idx;
-    int drag_start_x;
-    int drag_start_y;
 
     int get_vertex_from_click(int mouse_x, int mouse_y);
 };

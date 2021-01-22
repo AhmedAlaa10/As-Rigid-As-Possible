@@ -29,6 +29,11 @@ int VertexSelectionPlugin::get_vertex_from_click(int mouse_x, int mouse_y) {
     return -1;
 }
 
+void VertexSelectionPlugin::reset() {
+    this->fixedPoints.clear();
+    this->dragging = false;
+}
+
 bool VertexSelectionPlugin::mouse_down(int button, int modifier) {
     if (button != MOUSE_LEFT) {
         return false;
@@ -38,6 +43,8 @@ bool VertexSelectionPlugin::mouse_down(int button, int modifier) {
         auto selected = get_vertex_from_click(this->viewer->current_mouse_x, this->viewer->current_mouse_y);
         if (selected >= 0) {
             this->callback_anchor_selected(selected);
+
+            this->fixedPoints.emplace(selected);
         }
         return true;
     } else if ((modifier & MODIFIER_SHIFT) == MODIFIER_SHIFT) {
@@ -45,8 +52,6 @@ bool VertexSelectionPlugin::mouse_down(int button, int modifier) {
         if (selected >= 0) {
             this->dragging = true;
             this->drag_vertex_idx = selected;
-            this->drag_start_x = this->viewer->current_mouse_x;
-            this->drag_start_y = this->viewer->current_mouse_y;
         }
         return true;
     }
@@ -74,6 +79,7 @@ bool VertexSelectionPlugin::mouse_move(int button, int modifier) {
         screen_pos = this->viewer->core().view.inverse().cast<double>() * screen_pos;
 
         this->callback_vertex_dragged(this->drag_vertex_idx, screen_pos.segment<3>(0));
+        this->fixedPoints.emplace(this->drag_vertex_idx);
 
         return true;
     }
@@ -81,7 +87,12 @@ bool VertexSelectionPlugin::mouse_move(int button, int modifier) {
 }
 
 bool VertexSelectionPlugin::mouse_up (int button, int modifier) {
-    this->dragging = false;
+    if (button == MOUSE_LEFT) {
+        if (this->dragging) {
+            this->callback_anchor_selected(this->drag_vertex_idx);
+        }
+        this->dragging = false;
+    }
     return false;
 }
 

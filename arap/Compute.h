@@ -1,6 +1,4 @@
-
-#ifndef _COMPUTATION_H_
-#define _COMPUTATION_H_
+#pragma once
 
 #include "Eigen/Dense"
 #include "Eigen/Sparse"
@@ -55,15 +53,9 @@ public:
 	//returns a #no. of vertices x 3 matrix of gradients of vertices position w.r.t all dimensions
 	Eigen::MatrixXd& ComputeVertixGradients() const;
 
-
 	//Given a vertix position p' and the dimension (i.e. x, y or z)
 	//returns the energy gradient w.r.t to it
 	double ComputeVertixGradients_(int vertix, int dimension) const;
-
-
-
-
-
 
 };
 /*
@@ -83,20 +75,3 @@ inline const int Compute::GetIterations() const {
 	return maxIterations_;
 }
 */
-
-#endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#pragma once
