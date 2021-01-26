@@ -9,25 +9,20 @@ using namespace std;
 
 
 ArapCompute::ArapCompute(const Eigen::MatrixXd &vertices,
-                         const std::vector<int> &fixedVertices,
+                         const std::map<int, Eigen::Vector3d> &fixedVertices,
                          const Eigen::MatrixXi &faces,
                          int maxIterations)
         : vertices_(vertices),
           faces_(faces),
-          fixedVertices_Index(fixedVertices),
+          fixedVertices(fixedVertices),
           maxIterations_(maxIterations),
           rotations(vertices.rows()),
-          updatedVertices_(vertices.rows(), vertices.cols()),
-          fixedVertices_(fixedVertices.size(), 3) {
+          updatedVertices_(vertices) {
 
-    //Initialize the vector holding the indices of the free vertices.
-    updatedVertices_ = vertices_;
-
-    for (int i = 0; i < fixedVertices.size(); i++) {
-        fixedVertices_.row(i) = vertices_.row(fixedVertices_Index[i]);
-        updatedVertices_.row(i) = vertices_.row(fixedVertices_Index[i]);
+    // Initialize the vector holding the indices of the free vertices.
+    for (const auto& vertex : fixedVertices) {
+        updatedVertices_.row(vertex.first) = vertex.second;
     }
-
 }
 
 void ArapCompute::ComputeWeights() {
@@ -54,11 +49,11 @@ void ArapCompute::ComputeWeights() {
 
             //in Eigen::SparseMatrix, coeffRef() returns a non-constant reference to the value
             //of the matrix at position i, j
-            weight_.coeffRef(firstVertix, secondVertix) += cotan(v) / 2.0;
+            weight_.coeffRef(firstVertix, secondVertix) += 1.0 / tan(cotan(v)) / 2.0;
 
             //since the weight of the edge i-j (edge between vertix(i) and vertix(j) is the same
             //of the edge j-i, then we assign them the same weight in the weight_ matrix
-            weight_.coeffRef(secondVertix, firstVertix) += cotan(v) / 2.0;
+//            weight_.coeffRef(secondVertix, firstVertix) += 1.0 / tan(cotan(v)) / 2.0;
         }
     }
 
@@ -68,25 +63,40 @@ void ArapCompute::ComputeWeights() {
 Eigen::Vector3d ArapCompute::ComputeCotangent(int face_index) const {
     //inititalize the cotangent vector
     //REMINDER: the cotangent is the double the per-edge weight in the paper (i.e. Wij = 1/2 * cotangent(i)
+//    Eigen::Vector3d cotangent(0.0, 0.0, 0.0);
+//
+//    //3D positions of the vertices
+//    Eigen::Vector3d v1 = vertices_.row(faces_(face_index, 0));
+//    Eigen::Vector3d v2 = vertices_.row(faces_(face_index, 1));
+//    Eigen::Vector3d v3 = vertices_.row(faces_(face_index, 2));
+//
+//    //Area of the triangle
+//    double area = (v1 - v2).cross(v2 - v3).norm() / 2;
+//
+//    //the length of the sides squared
+//    //let's call the e1, e2, e3
+//    double e3_squared = (v1 - v2).squaredNorm();
+//    double e1_squared = (v2 - v3).squaredNorm();
+//    double e2_squared = (v3 - v1).squaredNorm();
+//
+//    cotangent(0) = (e3_squared + e2_squared - e1_squared) / (4 * area);
+//    cotangent(1) = (e3_squared + e1_squared - e2_squared) / (4 * area);
+//    cotangent(2) = (e2_squared + e1_squared - e3_squared) / (4 * area);
+//
+//    return cotangent;
     Eigen::Vector3d cotangent(0.0, 0.0, 0.0);
 
     //3D positions of the vertices
-    Eigen::Vector3d v1 = vertices_.row(faces_(face_index, 0));
-    Eigen::Vector3d v2 = vertices_.row(faces_(face_index, 1));
-    Eigen::Vector3d v3 = vertices_.row(faces_(face_index, 2));
+    Eigen::Vector3d v0 = vertices_.row(faces_(face_index, 0));
+    Eigen::Vector3d v1 = vertices_.row(faces_(face_index, 1));
+    Eigen::Vector3d v2 = vertices_.row(faces_(face_index, 2));
 
-    //Area of the triangle
-    double area = (v1 - v2).cross(v2 - v3).norm() / 2;
-
-    //the length of the sides squared
-    //let's call the e1, e2, e3
-    double e3_squared = (v1 - v2).squaredNorm();
-    double e1_squared = (v2 - v3).squaredNorm();
-    double e2_squared = (v3 - v1).squaredNorm();
-
-    cotangent(0) = (e3_squared + e2_squared - e1_squared) / (4 * area);
-    cotangent(1) = (e3_squared + e1_squared - e2_squared) / (4 * area);
-    cotangent(2) = (e2_squared + e1_squared - e3_squared) / (4 * area);
+    Eigen::Vector3d e01 = v0 - v1;
+    Eigen::Vector3d e12 = v1 - v2;
+    Eigen::Vector3d e02 = v0 - v2;
+    cotangent(0) = acos(e12.dot(e02) / (e12.norm() * e02.norm())); // angle opposite edge 0-1
+    cotangent(1) = acos(e01.dot(e02) / (e01.norm() * e02.norm())); // angle opposite edge 1-2
+    cotangent(2) = acos(e01.dot(e12) / (e01.norm() * e12.norm())); // angle opposite edge 0-2
 
     return cotangent;
 }
@@ -105,34 +115,18 @@ void ArapCompute::computeNeighbourVertices() {
     NeighborList.resize(nVertices);
 
     for (int face = 0; face < faces_.rows(); face++) {
-        for (int i = 0; i < 3; i++) {
-            int firstVertex = faces_(face, VertexToEdge_map[i][0]);
-            int secondVertex = faces_(face, VertexToEdge_map[i][1]);
+        int v0 = faces_(face, 0);
+        int v1 = faces_(face, 1);
+        int v2 = faces_(face, 2);
 
-            /*
-            *  IMPORTANT
-            *
-            *  NeighborList is a vector of vector holding the neighbor of each vertex in the mesh
-            *  For each vertex i there corresponds a vector of neighboring vertices.
-            *  each edge in every face has two vertices right, say i and j.
-            *  i and j are neighbor of one another. so i is a neighbor of j and vice versa.
-            *  This is basically what those two line down there mean.            *
-            *  For vector NeighborList at the row(i) we add the vertex (j) to it's vector of neighboring vertices.
-            *
-            *  Now, how do we call back the neighbor of vertex i when we need them? This is simple
-            *  first iterate over the vertices: for(int i=0; i<number_of_vertices; i++)
-            *  then iterate over the neighbors: for( int v : NeighborList[i])
-            *  which gives every vertex v neighboring vertex i
-            *
-            *  I hope i you got this right.
-            */
-            NeighborList[firstVertex].push_back(secondVertex);
-            //NeighborList[secondVertex].push_back(firstVertex);
-            // commented this out, since otherwise each neighbour is twice in each list
-            // (as far as i can tell, the result is actually correct, and (up to order) identical to
-            // what we would get if we have both these calls prefixed with a check if that vertex is
-            // already in this particular list)
-        }
+        NeighborList[v0].emplace(v1);
+        NeighborList[v0].emplace(v2);
+
+        NeighborList[v1].emplace(v0);
+        NeighborList[v1].emplace(v2);
+
+        NeighborList[v2].emplace(v0);
+        NeighborList[v2].emplace(v1);
     }
 }
 
@@ -151,17 +145,17 @@ void ArapCompute::computeLaplaceBeltramiOperator() {
         //get the index of the free vertex i
         //iterate over the neighbors of the vertix i
         for (auto &neighbor : NeighborList[i]) {
-                weight = weight_.coeff(i, neighbor);
-//            weight = 1.0;
+//                weight = weight_.coeff(i, neighbor);
+            weight = 1.0;
 
             L_operator.coeffRef(i, i) += weight;
-            L_operator.coeffRef(i, neighbor) = -weight;
+            L_operator.insert(i, neighbor) = -weight;
         }
     }
 
     // adjust the system matrix
-    for (int i = 0; i < fixedVertices_Index.size(); i++) {
-        auto k = fixedVertices_Index[i];
+    for (const auto& fixedVertex : fixedVertices) {
+        auto k = fixedVertex.first;
 
         // delete rows and columns from the system matrix
         for (int j = 0; j < nVertices; j++) {
@@ -188,6 +182,10 @@ void ArapCompute::NaiveLaplaceEditing() {
     Eigen::SimplicialCholesky<Eigen::SparseMatrix<double>> svd(L_operator);
 
     Eigen::MatrixXd delta = L_operator * vertices_;
+    for (const auto& fixedVertex : fixedVertices) {
+        delta.row(fixedVertex.first) = fixedVertex.second;
+    }
+
     updatedVertices_ = svd.solve(delta);
     if (svd.info() != Eigen::Success) {
         std::cout << "Solving the sparse Laplace-Beltrami Operator failed!" << std::endl;
@@ -214,23 +212,34 @@ void ArapCompute::ComputeRotations() {
 
     for (int i = 0; i < nVertices; i++) {
         Eigen::Matrix3d rotation;
-        Eigen::Matrix3d rotMatrix = Eigen::Matrix3d::Zero();
         //Iterate over neighbors of vertex i
         for (int j : NeighborList[i]) {
             restEdge = vertices_.row(i) - vertices_.row(j);
             deformedEdge = updatedVertices_.row(i) - updatedVertices_.row(j);
-            auto weight = weight_.coeff(i, j);
-//            auto weight = 1.0;
+//            auto weight = weight_.coeff(i, j);
+            auto weight = 1.0;
 
-            rotMatrix += weight * restEdge * deformedEdge.transpose();
+            rotation += weight * restEdge * deformedEdge.transpose();
 
-            //polar_svd3x3 computes the polar decomposition (U, V) of a matrix using SVD
-            //recall equation (6):			R[i] = V[i] * U[i].transpose()
-            //however, polar_svd3x3 outputs R[i] = U[i] * V[i].transpose()
-            //therefore we take the transpose of the output rotation.
-            igl::polar_svd3x3(rotMatrix, rotation);
-            rotations[i] = rotation.transpose();
         }
+        Eigen::JacobiSVD<Eigen::Matrix3d> svd(rotation, Eigen::ComputeFullU | Eigen::ComputeFullV);
+
+        rotation = svd.matrixV() * svd.matrixU().transpose();
+        if (rotation.determinant() == -1) {
+              Eigen::Matrix3d diag = Eigen::Matrix3d::Identity();
+              diag(2, 2) = -1;
+              rotation = svd.matrixV() * diag * svd.matrixU().transpose();
+        }
+        //polar_svd3x3 computes the polar decomposition (U, V) of a matrix using SVD
+        //recall equation (6):			R[i] = V[i] * U[i].transpose()
+        //however, polar_svd3x3 outputs R[i] = U[i] * V[i].transpose()
+        //therefore we take the transpose of the output rotation.
+//        igl::polar_svd3x3(rotMatrix, rotation);
+        rotations[i] = rotation;
+//        if ((rotation - Eigen::Matrix3d::Identity()).norm() > std::numeric_limits<float>::epsilon()) {
+//            std::cout << "rotation matrix not equal to identity: \n" << rotation << std::endl;
+//        }
+//        std::cout << "rotation i: " << i << "of value:\n" << rotation << std::endl;
     }
 
     std::cout << "Compute rotations ... DONE!" << std::endl;
@@ -248,54 +257,27 @@ void ArapCompute::ComputeRightHandSide() {
     for (int i = 0; i < nVertices; i++) {
         //Iterate over neighbors of vertex i
         for (int j : NeighborList[i]) {
-            double weight = weight_.coeff(i, j) / 2.0;
-//            double weight = 1.0;
+//            double weight = weight_.coeff(i, j) / 2.0;
+            double weight = 1.0;
 
             RHS.row(i) +=
-                    weight / 2.0f * (rotations[i] + rotations[j]) * (vertices_.row(i) - vertices_.row(j)).transpose();
+                    weight / 2.0 * (rotations[i] + rotations[j]) * (vertices_.row(i) - vertices_.row(j)).transpose();
         }
     }
 
 
-    for (int i = 0; i < fixedVertices_Index.size(); i++) {
-        auto k = fixedVertices_Index[i];
-        auto fixedVertex = fixedVertices_.row(i);
+    for (const auto& fixedVertex : fixedVertices) {
+        auto k = fixedVertex.first;
 
         for (int j = 0; j < nVertices; j++) {
             if (L_operator.coeff(j, k) != 0.0) {
-                RHS.row(i) -= L_operator.coeff(j, k) * fixedVertex;
+                RHS.row(j) -= L_operator.coeff(j, k) * fixedVertex.second;
             }
         }
-        RHS.row(k) = fixedVertex;
+        RHS.row(k) = fixedVertex.second;
     }
 
     std::cout << "Compute right hand side ... DONE!" << std::endl;
-}
-
-double ArapCompute::ComputeEnergy() {
-    int nVertices = vertices_.rows();
-
-    //Initialize the total energy
-    double total_energy = 0.0;
-
-    //Loop over all vertices
-    for (int i = 0; i < nVertices; i++) {
-
-        //Loop over all neighbors
-        for (auto &neighbor: Neighbors_[i]) {
-            int j = neighbor.first;
-
-            double weight = weight_.coeff(i, j);
-            double edge_energy = 0.0;
-
-            //See equation (7) in the paper
-            Eigen::Vector3d updatedVertices_vector = (cacheVertices_.row(i) - cacheVertices_.row(j)).transpose();
-            Eigen::Vector3d oldVertices_vector = (vertices_.row(i) - vertices_.row(j)).transpose();
-
-            total_energy += weight * (updatedVertices_vector - rotations[i] * oldVertices_vector).squaredNorm();
-        }
-    }
-    return total_energy;
 }
 
 void ArapCompute::UpdateVertices() {

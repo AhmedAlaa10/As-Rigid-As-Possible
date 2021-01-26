@@ -42,9 +42,9 @@ bool VertexSelectionPlugin::mouse_down(int button, int modifier) {
     if ((modifier & MODIFIER_CTRL) == MODIFIER_CTRL) {
         auto selected = get_vertex_from_click(this->viewer->current_mouse_x, this->viewer->current_mouse_y);
         if (selected >= 0) {
-            this->callback_anchor_selected(selected);
+            this->callback_anchor_selected(selected, this->viewer->data().V.row(selected));
 
-            this->fixedPoints.emplace(selected);
+            this->fixedPoints[selected] = this->viewer->data().V.row(selected);
         }
         return true;
     } else if ((modifier & MODIFIER_SHIFT) == MODIFIER_SHIFT) {
@@ -79,7 +79,7 @@ bool VertexSelectionPlugin::mouse_move(int button, int modifier) {
         screen_pos = this->viewer->core().view.inverse().cast<double>() * screen_pos;
 
         this->callback_vertex_dragged(this->drag_vertex_idx, screen_pos.segment<3>(0));
-        this->fixedPoints.emplace(this->drag_vertex_idx);
+        this->fixedPoints[this->drag_vertex_idx] = screen_pos.segment<3>(0);
 
         return true;
     }
@@ -89,7 +89,7 @@ bool VertexSelectionPlugin::mouse_move(int button, int modifier) {
 bool VertexSelectionPlugin::mouse_up (int button, int modifier) {
     if (button == MOUSE_LEFT) {
         if (this->dragging) {
-            this->callback_anchor_selected(this->drag_vertex_idx);
+            this->callback_anchor_selected(this->drag_vertex_idx, this->viewer->data().V.row(this->drag_vertex_idx));
         }
         this->dragging = false;
     }

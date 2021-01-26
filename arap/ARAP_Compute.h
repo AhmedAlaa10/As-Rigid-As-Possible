@@ -3,6 +3,7 @@
 #include "Eigen/SparseLU"
 #include "Compute.h"
 #include <unordered_map>
+#include <set>
 
 typedef std::unordered_map<int, int> Map;
 
@@ -11,7 +12,7 @@ class ArapCompute {
 public:
     // Class Constructor
     ArapCompute(const Eigen::MatrixXd &vertices,
-                const std::vector<int> &fixedVertices,
+                const std::map<int, Eigen::Vector3d> &fixedVertices,
                 const Eigen::MatrixXi &faces,
                 const int maxIterations);
 
@@ -78,26 +79,15 @@ private:
     Eigen::MatrixXd updatedVertices_;
 
     /*
-    *  stores the new calculated vertices
-    *  used in ComputeEnergy
-    *  if the computed energy is smaller than the previous energy calculated,
-    *  then updatedVertices_ = cachedVertices_
-    */
-    Eigen::MatrixXd cacheVertices_;
-
-    Eigen::MatrixXd fixedVertices_;
-
-    /*
     *  a no. of faces x 3 matrix
     *  the ith row stores the indices of the vertices of the ith face
     */
     const Eigen::MatrixXi faces_;
 
     /*
-    *  ixedVertices_Index is a vector of the indices of the vertices we want to fix during the deformation.
-    *  the fixed vertices are defined by the interacting user.
+    *  Fixed vertices as anchor points. Maps the vertex id to the new, fixed position
     */
-    const std::vector<int> fixedVertices_Index;
+    const std::map<int, Eigen::Vector3d> fixedVertices;
 
     /*
     *  freeVertices_Index is a vector of the indices of the free vertices.
@@ -109,7 +99,7 @@ private:
     int maxIterations_;
 
     //Stores all neighborhoods of each vertex
-    std::vector<std::vector<int>> NeighborList;
+    std::vector<std::set<int>> NeighborList;
 
     //A vector of map to store neighbors
     std::vector<Map> Neighbors_;

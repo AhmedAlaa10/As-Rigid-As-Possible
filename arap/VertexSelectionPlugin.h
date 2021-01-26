@@ -24,7 +24,7 @@ class Viewer;
 class VertexSelectionPlugin : public igl::opengl::glfw::ViewerPlugin {
   public:
     // callback called when a vertex is clicked, vertex id is passed
-    std::function<void(int)> callback_anchor_selected;
+    std::function<void(int, Eigen::Vector3d)> callback_anchor_selected;
     std::function<void(int, Eigen::Vector3d)> callback_vertex_dragged;
     VertexSelectionPlugin() = default;
     void reset();
@@ -33,7 +33,7 @@ class VertexSelectionPlugin : public igl::opengl::glfw::ViewerPlugin {
     IGL_INLINE bool mouse_up(int button, int modifier) override;
     IGL_INLINE bool mouse_move(int mouse_x, int mouse_y) override;
 
-    std::set<int> fixedPoints;
+    std::map<int, Eigen::Vector3d> fixedPoints;
   private:
     std::vector<Eigen::RowVector2f> L;
     Eigen::VectorXd W;
