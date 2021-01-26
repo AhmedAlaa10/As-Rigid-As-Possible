@@ -3,7 +3,6 @@
 
 #include "igl/slice.h"
 #include "igl/polar_svd.h"
-#include "igl/polar_svd3x3.h"
 
 using namespace std;
 
@@ -20,9 +19,9 @@ ArapCompute::ArapCompute(const Eigen::MatrixXd &vertices,
           updatedVertices_(vertices) {
 
     // Initialize the vector holding the indices of the free vertices.
-    for (const auto& vertex : fixedVertices) {
-        updatedVertices_.row(vertex.first) = vertex.second;
-    }
+//    for (const auto& vertex : fixedVertices) {
+//        updatedVertices_.row(vertex.first) = vertex.second;
+//    }
 }
 
 void ArapCompute::ComputeWeights() {
@@ -49,7 +48,8 @@ void ArapCompute::ComputeWeights() {
 
             //in Eigen::SparseMatrix, coeffRef() returns a non-constant reference to the value
             //of the matrix at position i, j
-            weight_.coeffRef(firstVertix, secondVertix) += 1.0 / tan(cotan(v)) / 2.0;
+//            weight_.coeffRef(firstVertix, secondVertix) += 1.0 / tan(cotan(v)) / 2.0;
+            weight_.coeffRef(firstVertix, secondVertix) += cotan(v) / 2.0;
 
             //since the weight of the edge i-j (edge between vertix(i) and vertix(j) is the same
             //of the edge j-i, then we assign them the same weight in the weight_ matrix
@@ -63,42 +63,42 @@ void ArapCompute::ComputeWeights() {
 Eigen::Vector3d ArapCompute::ComputeCotangent(int face_index) const {
     //inititalize the cotangent vector
     //REMINDER: the cotangent is the double the per-edge weight in the paper (i.e. Wij = 1/2 * cotangent(i)
-//    Eigen::Vector3d cotangent(0.0, 0.0, 0.0);
-//
-//    //3D positions of the vertices
-//    Eigen::Vector3d v1 = vertices_.row(faces_(face_index, 0));
-//    Eigen::Vector3d v2 = vertices_.row(faces_(face_index, 1));
-//    Eigen::Vector3d v3 = vertices_.row(faces_(face_index, 2));
-//
-//    //Area of the triangle
-//    double area = (v1 - v2).cross(v2 - v3).norm() / 2;
-//
-//    //the length of the sides squared
-//    //let's call the e1, e2, e3
-//    double e3_squared = (v1 - v2).squaredNorm();
-//    double e1_squared = (v2 - v3).squaredNorm();
-//    double e2_squared = (v3 - v1).squaredNorm();
-//
-//    cotangent(0) = (e3_squared + e2_squared - e1_squared) / (4 * area);
-//    cotangent(1) = (e3_squared + e1_squared - e2_squared) / (4 * area);
-//    cotangent(2) = (e2_squared + e1_squared - e3_squared) / (4 * area);
-//
-//    return cotangent;
     Eigen::Vector3d cotangent(0.0, 0.0, 0.0);
 
     //3D positions of the vertices
-    Eigen::Vector3d v0 = vertices_.row(faces_(face_index, 0));
-    Eigen::Vector3d v1 = vertices_.row(faces_(face_index, 1));
-    Eigen::Vector3d v2 = vertices_.row(faces_(face_index, 2));
+    Eigen::Vector3d v1 = vertices_.row(faces_(face_index, 0));
+    Eigen::Vector3d v2 = vertices_.row(faces_(face_index, 1));
+    Eigen::Vector3d v3 = vertices_.row(faces_(face_index, 2));
 
-    Eigen::Vector3d e01 = v0 - v1;
-    Eigen::Vector3d e12 = v1 - v2;
-    Eigen::Vector3d e02 = v0 - v2;
-    cotangent(0) = acos(e12.dot(e02) / (e12.norm() * e02.norm())); // angle opposite edge 0-1
-    cotangent(1) = acos(e01.dot(e02) / (e01.norm() * e02.norm())); // angle opposite edge 1-2
-    cotangent(2) = acos(e01.dot(e12) / (e01.norm() * e12.norm())); // angle opposite edge 0-2
+    //Area of the triangle
+    double area = (v1 - v2).cross(v2 - v3).norm() / 2;
+
+    //the length of the sides squared
+    //let's call the e1, e2, e3
+    double e3_squared = (v1 - v2).squaredNorm();
+    double e1_squared = (v2 - v3).squaredNorm();
+    double e2_squared = (v3 - v1).squaredNorm();
+
+    cotangent(0) = (e3_squared + e2_squared - e1_squared) / (4 * area);
+    cotangent(1) = (e3_squared + e1_squared - e2_squared) / (4 * area);
+    cotangent(2) = (e2_squared + e1_squared - e3_squared) / (4 * area);
 
     return cotangent;
+//    Eigen::Vector3d cotangent(0.0, 0.0, 0.0);
+//
+//    //3D positions of the vertices
+//    Eigen::Vector3d v0 = vertices_.row(faces_(face_index, 0));
+//    Eigen::Vector3d v1 = vertices_.row(faces_(face_index, 1));
+//    Eigen::Vector3d v2 = vertices_.row(faces_(face_index, 2));
+//
+//    Eigen::Vector3d e01 = v0 - v1;
+//    Eigen::Vector3d e12 = v1 - v2;
+//    Eigen::Vector3d e02 = v0 - v2;
+//    cotangent(0) = acos(e12.dot(e02) / (e12.norm() * e02.norm())); // angle opposite edge 0-1
+//    cotangent(1) = acos(e01.dot(e02) / (e01.norm() * e02.norm())); // angle opposite edge 1-2
+//    cotangent(2) = acos(e01.dot(e12) / (e01.norm() * e12.norm())); // angle opposite edge 0-2
+//
+//    return cotangent;
 }
 
 double ArapCompute::angleBetweenVectors(const Eigen::Vector3d &a, const Eigen::Vector3d &b) const {
@@ -211,7 +211,7 @@ void ArapCompute::ComputeRotations() {
     //S = per-edge weights * rest edge * deformed edge, summed over all vertices.
 
     for (int i = 0; i < nVertices; i++) {
-        Eigen::Matrix3d rotation;
+        Eigen::Matrix3d sum = Eigen::Matrix3d::Zero();
         //Iterate over neighbors of vertex i
         for (int j : NeighborList[i]) {
             restEdge = vertices_.row(i) - vertices_.row(j);
@@ -219,12 +219,12 @@ void ArapCompute::ComputeRotations() {
 //            auto weight = weight_.coeff(i, j);
             auto weight = 1.0;
 
-            rotation += weight * restEdge * deformedEdge.transpose();
+            sum += weight * restEdge * deformedEdge.transpose();
 
         }
-        Eigen::JacobiSVD<Eigen::Matrix3d> svd(rotation, Eigen::ComputeFullU | Eigen::ComputeFullV);
+        Eigen::JacobiSVD<Eigen::Matrix3d> svd(sum, Eigen::ComputeFullU | Eigen::ComputeFullV);
 
-        rotation = svd.matrixV() * svd.matrixU().transpose();
+        Eigen::Matrix3d rotation = svd.matrixV() * svd.matrixU().transpose();
         if (rotation.determinant() == -1) {
               Eigen::Matrix3d diag = Eigen::Matrix3d::Identity();
               diag(2, 2) = -1;
@@ -264,7 +264,6 @@ void ArapCompute::ComputeRightHandSide() {
                     weight / 2.0 * (rotations[i] + rotations[j]) * (vertices_.row(i) - vertices_.row(j)).transpose();
         }
     }
-
 
     for (const auto& fixedVertex : fixedVertices) {
         auto k = fixedVertex.first;

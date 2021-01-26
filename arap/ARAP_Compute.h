@@ -101,9 +101,6 @@ private:
     //Stores all neighborhoods of each vertex
     std::vector<std::set<int>> NeighborList;
 
-    //A vector of map to store neighbors
-    std::vector<Map> Neighbors_;
-
     /*
     *  A sparse matrix used to store weights
     *  This is a nVertices x nVertices matrix with zero diagonal elements

@@ -25,6 +25,13 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    // center mesh
+    Eigen::Vector3d mean = V.colwise().mean();
+    std::cout << "Centering mesh to its mean:\n" << mean << std::endl;
+    for (int i = 0; i < V.rows(); i++) {
+        V.row(i) -= mean;
+    }
+
     // initially copy deformed into current
     deformedV = V;
 
