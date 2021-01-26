@@ -40,7 +40,7 @@ public:
     double ComputeEnergy();
 
     //A getter function: returns the updatedVertices_ matrix.
-    const Eigen::MatrixXd &getVertices() const;
+    const Eigen::MatrixXd &getUpdatedVertices() const;
 
 private:
 
@@ -103,7 +103,7 @@ private:
     *  freeVertices_Index is a vector of the indices of the free vertices.
     *  freeVertices_Index = total no. of vertices - no. of fixed indices
     */
-    std::vector<int> freeVertices_Index;
+//    std::vector<int> freeVertices_Index;
 
     //Maximum no. of iterations used to solve the ARAP problem
     int maxIterations_;
@@ -133,6 +133,6 @@ private:
 
 };
 
-inline const Eigen::MatrixXd &ArapCompute::getVertices() const {
-    return vertices_;
+inline const Eigen::MatrixXd &ArapCompute::getUpdatedVertices() const {
+    return updatedVertices_;
 }
