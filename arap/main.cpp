@@ -10,7 +10,7 @@ int main(int argc, char** argv) {
 
     int currentVertexID;
     // inputs for the ARAP
-    int maxIter = 10;
+    int maxIter = 0;
     Eigen::Vector3d oldPosition;
     Eigen::Vector3d newPosition;
 

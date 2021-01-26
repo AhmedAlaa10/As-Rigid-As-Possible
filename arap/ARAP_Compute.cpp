@@ -152,7 +152,6 @@ void ArapCompute::computeLaplaceBeltramiOperator() {
     for (int i = 0; i < nVertices; i++) {
         //get the index of the free vertex i
         //iterate over the neighbors of the vertix i
-<<<<<<< HEAD
         if (std::find(fixedVertices_Index.begin(), fixedVertices_Index.end(), i) != fixedVertices_Index.end()) 
         {
             L_operator.coeffRef(i, i) = 1.0;
@@ -161,14 +160,12 @@ void ArapCompute::computeLaplaceBeltramiOperator() {
         {
             for (auto &neighbor : NeighborList[i]) 
             {
-=======
-        for (auto &neighbor : NeighborList[i]) {
->>>>>>> a3663cf64f915655cd9fc6f71b89c88d96c4e39e
                 weight = weight_.coeff(i, neighbor);
 //            weight = 1.0;
 
             L_operator.coeffRef(i, i) += weight;
             L_operator.coeffRef(i, neighbor) = -weight;
+            }
         }
     }
 
@@ -195,7 +192,6 @@ void ArapCompute::NaiveLaplaceEditing() {
     // initial rotation
     std::cout << "Compute Initial guess ..." << std::endl;
 
-<<<<<<< HEAD
     int n = vertices_.rows();
 
     Eigen::SparseLU<Eigen::SparseMatrix<double>> naive_laplace_solver;
@@ -214,16 +210,6 @@ void ArapCompute::NaiveLaplaceEditing() {
 
     // solution to ||Lp'-delta||^2 : p' = (L.transpose * L).inverser()*L.transpose * delta
     updatedVertices_ = L_trans_L_inverse * L_operator.transpose() * delta;
-=======
-    Eigen::SimplicialCholesky<Eigen::SparseMatrix<double>> svd(L_operator);
-
-    Eigen::MatrixXd delta = L_operator * vertices_;
-    updatedVertices_ = svd.solve(delta);
-    if (svd.info() != Eigen::Success) {
-        std::cout << "Solving the sparse Laplace-Beltrami Operator failed!" << std::endl;
-        exit(EXIT_FAILURE);
-    }
->>>>>>> a3663cf64f915655cd9fc6f71b89c88d96c4e39e
 
     std::cout << "Naive Laplacian Editing ... DONE !" << std::endl;
 }
