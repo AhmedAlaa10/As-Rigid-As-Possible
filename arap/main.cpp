@@ -10,7 +10,7 @@ int main(int argc, char** argv) {
 
     int currentVertexID;
     // inputs for the ARAP
-    int maxIter = 4;
+    int maxIter = 10;
     Eigen::Vector3d oldPosition;
     Eigen::Vector3d newPosition;
 
@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
             std::cout << "computing arap now" << std::endl;
             ArapCompute arap(viewer.data().V, std::vector<int>(plugin.fixedPoints.begin(), plugin.fixedPoints.end()), viewer.data().F, maxIter);
             arap.alternatingOptimization();
-            viewer.data().set_vertices(arap.getVertices());
+            viewer.data().set_vertices(arap.getUpdatedVertices());
             return true;
         }
 
