@@ -5,6 +5,8 @@
 #include "igl/polar_svd.h"
 #include "igl/polar_svd3x3.h"
 
+#include <Eigen/Dense>
+
 using namespace std;
 
 
@@ -135,10 +137,10 @@ void ArapCompute::computeNeighbourVertices() {
             *  For each vertex i there corresponds a vector of neighboring vertices.
             *  each edge in every face has two vertices right, say i and j.
             *  i and j are neighbor of one another. so i is a neighbor of j and vice versa.
-            *  This is basically what those two line down there mean.            *
-            *  For vector NeighborList at the row(i) we add the vertex (j) to it's vector of neighboring vertices.
+            *  This is basically what those two lines down there mean.            *
+            *  For vector NeighborList at the row(i) we add the vertex (j) to it's vector of neighbors.
             *
-            *  Now, how do we call back the neighbor of vertex i when we need them? This is simple
+            *  Now, how do we call back the neighbors of vertex i when we need them? This is simple
             *  first iterate over the vertices: for(int i=0; i<number_of_vertices; i++)
             *  then iterate over the neighbors: for( int v : NeighborList[i])
             *  which gives every vertex v neighboring vertex i
@@ -166,10 +168,14 @@ void ArapCompute::computeLaplaceBeltramiOperator() {
     for (int i = 0; i < nVertices; i++) {
         //get the index of the free vertex i
         //iterate over the neighbors of the vertix i
-        if (std::find(fixedVertices_Index.begin(), fixedVertices_Index.end(), i) != fixedVertices_Index.end()) {
+        if (std::find(fixedVertices_Index.begin(), fixedVertices_Index.end(), i) != fixedVertices_Index.end()) 
+        {
             L_operator.coeffRef(i, i) = 1.0;
-        } else {
-            for (auto &neighbor : NeighborList[i]) {
+        }
+        else 
+        {
+            for (auto &neighbor : NeighborList[i]) 
+            {
                 weight = weight_.coeff(i, neighbor);
 
                 L_operator.coeffRef(i, i) += weight;
@@ -177,9 +183,6 @@ void ArapCompute::computeLaplaceBeltramiOperator() {
             }
         }
     }
-
-    //for reducing memory consumption
-    //makeCompressed() turns the sparseMatrix L_operator into the Compressed row/col storage form.
     L_operator.makeCompressed();
 
     sparse_solver.compute(L_operator);
@@ -198,18 +201,22 @@ void ArapCompute::NaiveLaplaceEditing() {
 
     int n = vertices_.rows();
 
+    Eigen::SparseLU<Eigen::SparseMatrix<double>> naive_laplace_solver;
+
+    auto L_trans_L = L_operator.transpose() * L_operator;
+    naive_laplace_solver.compute(L_trans_L);
+
     Eigen::SparseMatrix<double> I(n, n);
     I.setIdentity();
 
-    auto L_trans_L = L_operator.transpose() * L_operator;
-    sparse_solver.compute(L_trans_L);
+    auto L_trans_L_inverse = naive_laplace_solver.solve(I);
+    
 
-    auto L_Operator_inv = sparse_solver.solve(I);
 
     Eigen::MatrixXd delta = L_operator * vertices_;
 
     // solution to ||Lp'-delta||^2 : p' = (L.transpose * L).inverser()*L.transpose * delta
-    updatedVertices_ = L_Operator_inv * L_operator.transpose() * delta;
+    updatedVertices_ = L_trans_L_inverse * L_operator.transpose() * delta;
 
     std::cout << "Naive Laplacian Editing ... DONE !" << std::endl;
 }
