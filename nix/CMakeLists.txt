@@ -42,6 +42,7 @@ add_executable(arap
     ../arap/main.cpp
     ../arap/VertexSelectionPlugin.cpp
     ../arap/VertexSelectionPlugin.h
+    ../arap/ARAP_Compute.cpp
 )
 target_link_libraries(arap igl::core igl::opengl_glfw ceres)
 
