@@ -146,10 +146,13 @@ void ArapCompute::computeNeighbourVertices() {
             *  I hope i you got this right.
             */
             NeighborList[firstVertex].push_back(secondVertex);
-            NeighborList[secondVertex].push_back(firstVertex);
+            //NeighborList[secondVertex].push_back(firstVertex);
+            // commented this out, since otherwise each neighbour is twice in each list
+            // (as far as i can tell, the result is actually correct, and (up to order) identical to
+            // what we would get if we have both these calls prefixed with a check if that vertex is
+            // already in this particular list)
         }
     }
-
 }
 
 void ArapCompute::computeLaplaceBeltramiOperator() {
