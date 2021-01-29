@@ -34,40 +34,16 @@ void ArapCompute::ComputeWeights() {
     //Initial the weight matrix
     weight_.resize(nVertices, nVertices);
     weight_.setZero();
-//    const int vertexToEdge[3][2] = {{1, 2},
-//                                    {0, 2},
-//                                    {0, 1}};
-    const int vertexToEdge[3][2] = {{0, 1},
-                                    {1, 2},
-                                    {2, 0}};
-
-    // iterating through each face to work with every single triangle
-//    for (int face = 0; face < nFaces; face++) {
-//        //compute the cotangent vector of the face
-//        //loop over the three vertices within the face
-//        for (int v = 0; v < 3; v++) {
-//            int v0 = faces_(face, v);
-//            //indices of the two vertices in the edge
-//            int v1 = faces_(face, vertexToEdge[v][0]);
-//            int v2 = faces_(face, vertexToEdge[v][1]);
-//
-//            Eigen::Vector3d x = vertices_.row(v1) - vertices_.row(v0);
-//            Eigen::Vector3d y = vertices_.row(v2) - vertices_.row(v0);
-//            double w = x.dot(y) / (x.cross(y)).norm();
-//            weight_.coeffRef(v1, v2) += w / 2.0;
-//            weight_.coeffRef(v2, v1) += w / 2.0;
-//        }
-//
-//    }
+    
     for (int face = 0; face < nFaces; face++) {
         //compute the cotangent vector of the face
         Eigen::Vector3d cotan = ComputeCotangent(face);
 
         //loop over the three vertices within the face
         for (int v = 0; v < 3; v++) {
-            //indices of the two vertices in the edge
-            int firstVertix = faces_(face, (v+1)%3); //VertexToEdge_map[v][0]);
-            int secondVertix = faces_(face, (v+2)%3); //VertexToEdge_map[v][1]);
+            //indices of the two vertices in the edge (equivalent to the old VertexToEdge map)
+            int firstVertix = faces_(face, (v+1)%3);
+            int secondVertix = faces_(face, (v+2)%3);
 
             //in Eigen::SparseMatrix, coeffRef() returns a non-constant reference to the value
             //of the matrix at position i, j
@@ -129,13 +105,13 @@ void ArapCompute::computeLaplaceBeltramiOperator() {
     L_operator.resize(nVertices, nVertices);
     L_operator.setZero();
 
-    // Iteratre over all vertices
+    // Iterate over all vertices
     for (int i = 0; i < nVertices; i++) {
         if (fixedVertices.count(i) > 0) {
             L_operator.coeffRef(i, i) = 1.0;
         } else {
-            //get the index of the free vertex i
-            //iterate over the neighbors of the vertix i
+            // get the index of the free vertex i
+            // iterate over the neighbors of the vertix i
             double diagWeight = 0;
             for (auto &neighbor : NeighborList[i]) {
                 double weight = weight_.coeff(i, neighbor);
@@ -147,8 +123,8 @@ void ArapCompute::computeLaplaceBeltramiOperator() {
         }
     }
 
-    //for reducing memory consumption
-    //makeCompressed() turns the sparseMatrix L_operator into the Compressed row/col storage form.
+    // for reducing memory consumption
+    // makeCompressed() turns the sparseMatrix L_operator into the Compressed row/col storage form.
     L_operator.makeCompressed();
 
     sparse_solver.analyzePattern(L_operator);
@@ -163,6 +139,8 @@ void ArapCompute::NaiveLaplaceEditing() {
     std::cout << "Compute Initial guess ..." << std::endl;
 
     Eigen::MatrixXd delta = L_operator * vertices_;
+    
+    // make sure the fixed vertices do not change
     for (const auto &fixedVertex : fixedVertices) {
         delta.row(fixedVertex.first) = fixedVertex.second;
     }
@@ -184,7 +162,6 @@ void ArapCompute::ComputeRotations() {
     //total number of vertices
     int nVertices = vertices_.rows();
 
-    Eigen::VectorXi neighbours;
     Eigen::Vector3d restEdge;
     Eigen::Vector3d deformedEdge;
 
@@ -217,7 +194,6 @@ void ArapCompute::ComputeRotations() {
 void ArapCompute::ComputeRightHandSide() {
     std::cout << "Compute the right hand side ..." << std::endl;
 
-    Eigen::VectorXi neighbours;
     int nVertices = vertices_.rows();
 
     //Initialize the right hand side matrix of equations (8) and (9).

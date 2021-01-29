@@ -37,9 +37,6 @@ public:
 
     void alternatingOptimization();
 
-    //Computes the energy gives a set of updated vertices positions and rotations.
-    double ComputeEnergy();
-
     //A getter function: returns the updatedVertices_ matrix.
     const Eigen::MatrixXd &getUpdatedVertices() const;
 
@@ -47,9 +44,6 @@ private:
 
     //Computes the cotangents of the edges in the given face
     Eigen::Vector3d ComputeCotangent(int face_index) const;
-
-    //Helper function to compute the angle between to vectors
-    double angleBetweenVectors(const Eigen::Vector3d &a, const Eigen::Vector3d &b) const;
 
     /*
 	*  Computes the indices of all the neighbouring vectors for a given vector ID
@@ -83,12 +77,6 @@ private:
     *  Fixed vertices as anchor points. Maps the vertex id to the new, fixed position
     */
     const std::map<int, Eigen::Vector3d> fixedVertices;
-
-    /*
-    *  freeVertices_Index is a vector of the indices of the free vertices.
-    *  freeVertices_Index = total no. of vertices - no. of fixed indices
-    */
-//    std::vector<int> freeVertices_Index;
 
     //Maximum no. of iterations used to solve the ARAP problem
     int maxIterations_;

@@ -11,8 +11,6 @@ int main(int argc, char** argv) {
 
     // inputs for the ARAP
     int maxIter = 20;
-    Eigen::Vector3d oldPosition;
-    Eigen::Vector3d newPosition;
 
     // optional command line argument for different files (or paths)
     std::string path = argc == 2 ? argv[1] : "../data/bunny.off";
@@ -31,16 +29,15 @@ int main(int argc, char** argv) {
         V.row(i) -= mean;
     }
 
-    // initially copy deformed into current
+    // copy the input mesh, so we can restore it later
     deformedV = V;
 
     // show the mesh in the igl viewer
     igl::opengl::glfw::Viewer viewer;
     VertexSelectionPlugin plugin;
-    //Arap ArapPlugin;
     viewer.data().point_size = 20;
     
-
+    // a new point was selected (i.e. click or dragging stopped)
     plugin.callback_anchor_selected = [&](int vertexID, const Eigen::Vector3d& position) {
         std::cout << "INFO: selected an anchor point at:\n" << position << std::endl;
         
@@ -55,28 +52,25 @@ int main(int argc, char** argv) {
         }
         viewer.data().set_points(fixpointmatrix, Eigen::RowVector3d(255,0,0));
         
-        
-        std::cout << "computing arap now" << std::endl;
+        // perform a full ARAP pass, display & set the current mesh to the result
+        std::cout << "INFO: computing full arap" << std::endl;
         ArapCompute arap(V, plugin.fixedPoints, F, maxIter);
         arap.alternatingOptimization();
         viewer.data().set_vertices(arap.getUpdatedVertices());
         deformedV = arap.getUpdatedVertices();
     };
 
-
+    // update function: currently dragging a vertex
     plugin.callback_vertex_dragged = [&](int vertexID, const Eigen::Vector3d& new_position) {
-        std::cout << "INFO: updating vertex " << vertexID << " to new vertex position" /*<< new_position */<< std::endl;
-        //deformedV.row(vertexID) = new_position;
-        //viewer.data().set_vertices(deformedV);
-        //newPosition = new_position;
+        std::cout << "INFO: dragging vertex #" << vertexID << ", doing simple deformation" << std::endl;
         
-        std::cout << "computing arap now" << std::endl;
+        // "preview" transformation. start with the current (already-deformed) mesh to make it look better
         ArapCompute arap(deformedV, plugin.fixedPoints, F, 0);
         arap.alternatingOptimization();
         viewer.data().set_vertices(arap.getUpdatedVertices());
-        //deformedV = arap.getUpdatedVertices();
     };
 
+    // user pressed a key
     viewer.callback_key_pressed = [&](igl::opengl::glfw::Viewer& viewer, unsigned int key, int modifiers) -> bool {
         if (key == 'i' || key == 'I') {
             std::cout << "computing arap now" << std::endl;
