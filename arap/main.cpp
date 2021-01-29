@@ -40,10 +40,22 @@ int main(int argc, char** argv) {
     VertexSelectionPlugin plugin;
     //Arap ArapPlugin;
     viewer.data().point_size = 20;
+    
 
     plugin.callback_anchor_selected = [&](int vertexID, const Eigen::Vector3d& position) {
-        std::cout << "selected an anchor point at " << position << std::endl;
-        viewer.data().add_points(position.transpose(), Eigen::RowVector3d(255, 0, 0));
+        std::cout << "INFO: selected an anchor point at:\n" << position << std::endl;
+        
+        // the eigen viewer does not have a point_remove()-member function, so instead we
+        // have to re-assemble the entire set of fixed point each time in a matrix format
+        // which eigen understands
+        Eigen::MatrixXd fixpointmatrix (plugin.fixedPoints.size(), 3);
+        int i = 0;
+        for (auto iter = plugin.fixedPoints.begin(); iter != plugin.fixedPoints.end(); ++iter){
+            fixpointmatrix.row(i) = iter->second.transpose();
+            i++;
+        }
+        viewer.data().set_points(fixpointmatrix, Eigen::RowVector3d(255,0,0));
+        
         currentVertexID = vertexID;
     };
 
@@ -51,7 +63,7 @@ int main(int argc, char** argv) {
    // oldPosition = V.row(currentVertexID);
 
     plugin.callback_vertex_dragged = [&](int vertexID, const Eigen::Vector3d& new_position) {
-        std::cout << "updating vertex\n" << V.row(vertexID) << "\nto new vertex position\n" << new_position << std::endl;
+        std::cout << "INFO: updating vertex " << vertexID << " to new vertex position" /*<< new_position */<< std::endl;
         deformedV.row(vertexID) = new_position;
         viewer.data().set_vertices(deformedV);
         //newPosition = new_position;
@@ -63,6 +75,7 @@ int main(int argc, char** argv) {
             ArapCompute arap(V, plugin.fixedPoints, F, maxIter);
             arap.alternatingOptimization();
             viewer.data().set_vertices(arap.getUpdatedVertices());
+            deformedV = arap.getUpdatedVertices();
             return true;
         }
 

@@ -42,9 +42,9 @@ bool VertexSelectionPlugin::mouse_down(int button, int modifier) {
     if ((modifier & MODIFIER_CTRL) == MODIFIER_CTRL) {
         auto selected = get_vertex_from_click(this->viewer->current_mouse_x, this->viewer->current_mouse_y);
         if (selected >= 0) {
-            this->callback_anchor_selected(selected, this->viewer->data().V.row(selected));
-
             this->fixedPoints[selected] = this->viewer->data().V.row(selected);
+
+            this->callback_anchor_selected(selected, this->viewer->data().V.row(selected));
         }
         return true;
     } else if ((modifier & MODIFIER_SHIFT) == MODIFIER_SHIFT) {
@@ -52,6 +52,7 @@ bool VertexSelectionPlugin::mouse_down(int button, int modifier) {
         if (selected >= 0) {
             this->dragging = true;
             this->drag_vertex_idx = selected;
+            this->fixedPoints[selected] = this->viewer->data().V.row(selected);
         }
         return true;
     }
@@ -61,7 +62,7 @@ bool VertexSelectionPlugin::mouse_down(int button, int modifier) {
 bool VertexSelectionPlugin::mouse_move(int button, int modifier) {
     //if (button == MOUSE_LEFT && (modifier & MODIFIER_SHIFT) == MODIFIER_SHIFT && this->dragging) {
     if (this->dragging) {
-        std::cout << "done some dragging" << std::endl;
+        //std::cout << "done some dragging" << std::endl;
         //this->dragging = false;
 
         Eigen::Vector4d vertex_homog = Eigen::Vector4d::Ones();
