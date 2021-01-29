@@ -19,9 +19,9 @@ ArapCompute::ArapCompute(const Eigen::MatrixXd &vertices,
           updatedVertices_(vertices) {
 
     // Initialize the vector holding the indices of the free vertices.
-//    for (const auto& vertex : fixedVertices) {
-//        updatedVertices_.row(vertex.first) = vertex.second;
-//    }
+    for (const auto& vertex : fixedVertices) {
+        updatedVertices_.row(vertex.first) = vertex.second;
+    }
 }
 
 void ArapCompute::ComputeWeights() {
@@ -137,7 +137,7 @@ void ArapCompute::computeLaplaceBeltramiOperator() {
     double weight;
 
     //compute the laplace-beltrami operator
-    L_operator.resize(nVertices, nVertices);
+    L_operator.resize(nVertices + fixedVertices.size(), nVertices);
     L_operator.setZero();
 
     // Iteratre over all vertices
@@ -154,17 +154,12 @@ void ArapCompute::computeLaplaceBeltramiOperator() {
     }
 
     // adjust the system matrix
+    int i = 0;
     for (const auto& fixedVertex : fixedVertices) {
         auto k = fixedVertex.first;
 
-        // delete rows and columns from the system matrix
-        for (int j = 0; j < nVertices; j++) {
-            if (L_operator.coeff(k, j) != 0.0) {
-                L_operator.coeffRef(k, j) = 0.0;
-                L_operator.coeffRef(j, k) = 0.0;
-            }
-        }
-        L_operator.coeffRef(k, k) = 1.0;
+        L_operator.coeffRef(nVertices + i, k) = 1.0;
+        i++;
     }
 
     //for reducing memory consumption
@@ -234,12 +229,7 @@ void ArapCompute::ComputeRotations() {
         //recall equation (6):			R[i] = V[i] * U[i].transpose()
         //however, polar_svd3x3 outputs R[i] = U[i] * V[i].transpose()
         //therefore we take the transpose of the output rotation.
-//        igl::polar_svd3x3(rotMatrix, rotation);
         rotations[i] = rotation;
-//        if ((rotation - Eigen::Matrix3d::Identity()).norm() > std::numeric_limits<float>::epsilon()) {
-//            std::cout << "rotation matrix not equal to identity: \n" << rotation << std::endl;
-//        }
-//        std::cout << "rotation i: " << i << "of value:\n" << rotation << std::endl;
     }
 
     std::cout << "Compute rotations ... DONE!" << std::endl;
@@ -252,7 +242,7 @@ void ArapCompute::ComputeRightHandSide() {
     int nVertices = vertices_.rows();
 
     //Initialize the right hand side matrix of equations (8) and (9).
-    RHS = Eigen::MatrixXd::Zero(nVertices, 3);
+    RHS = Eigen::MatrixXd::Zero(nVertices + fixedVertices.size(), 3);
 
     for (int i = 0; i < nVertices; i++) {
         //Iterate over neighbors of vertex i
@@ -265,15 +255,17 @@ void ArapCompute::ComputeRightHandSide() {
         }
     }
 
+    int i = 0;
     for (const auto& fixedVertex : fixedVertices) {
         auto k = fixedVertex.first;
 
-        for (int j = 0; j < nVertices; j++) {
-            if (L_operator.coeff(j, k) != 0.0) {
-                RHS.row(j) -= L_operator.coeff(j, k) * fixedVertex.second;
-            }
-        }
-        RHS.row(k) = fixedVertex.second;
+//        for (int j = 0; j < nVertices; j++) {
+//            if (L_operator.coeff(j, k) != 0.0) {
+//                RHS.row(j) -= L_operator.coeff(j, k) * fixedVertex.second;
+//            }
+//        }
+        RHS.row(nVertices + i) = fixedVertex.second;
+        i++;
     }
 
     std::cout << "Compute right hand side ... DONE!" << std::endl;
@@ -291,7 +283,7 @@ void ArapCompute::alternatingOptimization() {
     ComputeWeights();
     computeNeighbourVertices();
     computeLaplaceBeltramiOperator();
-//    NaiveLaplaceEditing();
+    NaiveLaplaceEditing();
 
     for (int iter = 0; iter < maxIterations_; iter++) {
         ComputeRotations();
