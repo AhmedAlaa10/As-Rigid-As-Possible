@@ -90,5 +90,11 @@ int main(int argc, char** argv) {
     viewer.plugins.push_back(&plugin);
     viewer.data().set_mesh(V, F);
     viewer.core().set_rotation_type(igl::opengl::ViewerCore::ROTATION_TYPE_TRACKBALL);
+    
+    std::cout << "\n ==== ARAP keybindings ====\n"
+              << "  Ctrl    Make fixpoint\n"
+              << "  Shift   Drag fixpoint with mouse\n"
+              << "  i       Apply ARAP algorithm\n"
+              << "  r       Reset mesh" << std::endl;
     viewer.launch();
 }
