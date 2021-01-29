@@ -29,9 +29,6 @@ int main(int argc, char** argv) {
         V.row(i) -= mean;
     }
 
-    // copy the input mesh, so we can restore it later
-    deformedV = V;
-
     // show the mesh in the igl viewer
     igl::opengl::glfw::Viewer viewer;
     VertexSelectionPlugin plugin;
@@ -72,31 +69,42 @@ int main(int argc, char** argv) {
 
     // user pressed a key
     viewer.callback_key_pressed = [&](igl::opengl::glfw::Viewer& viewer, unsigned int key, int modifiers) -> bool {
-        if (key == 'i' || key == 'I') {
+        /*if (key == 'i' || key == 'I') {
             std::cout << "computing arap now" << std::endl;
             ArapCompute arap(V, plugin.fixedPoints, F, maxIter);
             arap.alternatingOptimization();
             viewer.data().set_vertices(arap.getUpdatedVertices());
             deformedV = arap.getUpdatedVertices();
             return true;
-        } else if (key == 'r' || key == 'R') {
-            deformedV = V;
+        } else*/ if (key == 'r' || key == 'R') {
+            // redo the initial size hack
+            plugin.reset();
+            ArapCompute arap(V, plugin.fixedPoints, F, 1);
+            arap.alternatingOptimization();
+            deformedV = arap.getUpdatedVertices();
             viewer.data().set_vertices(deformedV);
             viewer.data().clear_points();
-            plugin.reset();
         }
 
         return false;
     };
 
     viewer.plugins.push_back(&plugin);
-    viewer.data().set_mesh(V, F);
+    
+    // initial ARAP pass, to scale the mesh down
+    ArapCompute arap(V, plugin.fixedPoints, F, 1);
+    // copy the initial mesh, so we can restore it later
+    arap.alternatingOptimization();
+    deformedV = arap.getUpdatedVertices();
+    
+    //deformedV = V;
+    viewer.data().set_mesh(deformedV, F);
     viewer.core().set_rotation_type(igl::opengl::ViewerCore::ROTATION_TYPE_TRACKBALL);
     
     std::cout << "\n ==== ARAP keybindings ====\n"
               << "  Ctrl    Make fixpoint\n"
               << "  Shift   Drag fixpoint with mouse\n"
-              << "  i       Apply ARAP algorithm\n"
+              /*<< "  i       Apply ARAP algorithm\n"*/
               << "  r       Reset mesh" << std::endl;
     viewer.launch();
 }
