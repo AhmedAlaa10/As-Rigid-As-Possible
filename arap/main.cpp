@@ -77,6 +77,11 @@ int main(int argc, char** argv) {
             viewer.data().set_vertices(arap.getUpdatedVertices());
             deformedV = arap.getUpdatedVertices();
             return true;
+        } else if (key == 'r' || key == 'R') {
+            deformedV = V;
+            viewer.data().set_vertices(deformedV);
+            viewer.data().clear_points();
+            plugin.reset();
         }
 
         return false;
