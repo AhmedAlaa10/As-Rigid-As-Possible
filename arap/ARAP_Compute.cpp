@@ -43,13 +43,14 @@ void ArapCompute::ComputeWeights() {
         //loop over the three vertices within the face
         for (int v = 0; v < 3; v++) {
             //indices of the two vertices in the edge
-            int firstVertix = faces_(face, VertexToEdge_map[v][0]);
-            int secondVertix = faces_(face, VertexToEdge_map[v][1]);
+            int firstVertix = faces_(face, (v+1)%3); //VertexToEdge_map[v][0]);
+            int secondVertix = faces_(face, (v+2)%3); //VertexToEdge_map[v][1]);
 
             //in Eigen::SparseMatrix, coeffRef() returns a non-constant reference to the value
             //of the matrix at position i, j
 //            weight_.coeffRef(firstVertix, secondVertix) += 1.0 / tan(cotan(v)) / 2.0;
-            weight_.coeffRef(firstVertix, secondVertix) += cotan(v) / 2.0;
+            weight_.coeffRef(firstVertix, secondVertix) += cotan(v) / 2;
+            weight_.coeffRef(secondVertix, firstVertix) += cotan(v) / 2;
 
             //since the weight of the edge i-j (edge between vertix(i) and vertix(j) is the same
             //of the edge j-i, then we assign them the same weight in the weight_ matrix
@@ -66,39 +67,23 @@ Eigen::Vector3d ArapCompute::ComputeCotangent(int face_index) const {
     Eigen::Vector3d cotangent(0.0, 0.0, 0.0);
 
     //3D positions of the vertices
-    Eigen::Vector3d v1 = vertices_.row(faces_(face_index, 0));
-    Eigen::Vector3d v2 = vertices_.row(faces_(face_index, 1));
-    Eigen::Vector3d v3 = vertices_.row(faces_(face_index, 2));
+    Eigen::Vector3d v0 = vertices_.row(faces_(face_index, 0));
+    Eigen::Vector3d v1 = vertices_.row(faces_(face_index, 1));
+    Eigen::Vector3d v2 = vertices_.row(faces_(face_index, 2));
 
-    //Area of the triangle
-    double area = (v1 - v2).cross(v2 - v3).norm() / 2;
-
-    //the length of the sides squared
-    //let's call the e1, e2, e3
-    double e3_squared = (v1 - v2).squaredNorm();
-    double e1_squared = (v2 - v3).squaredNorm();
-    double e2_squared = (v3 - v1).squaredNorm();
-
-    cotangent(0) = (e3_squared + e2_squared - e1_squared) / (4 * area);
-    cotangent(1) = (e3_squared + e1_squared - e2_squared) / (4 * area);
-    cotangent(2) = (e2_squared + e1_squared - e3_squared) / (4 * area);
+    Eigen::Vector3d e01 = v0 - v1;
+    Eigen::Vector3d e12 = v1 - v2;
+    Eigen::Vector3d e02 = v0 - v2;
+    cotangent(0) = acos(e12.dot(e02) / (e12.norm() * e02.norm())); // angle opposite edge 0-1
+    cotangent(1) = acos(e01.dot(e02) / (e01.norm() * e02.norm())); // angle opposite edge 1-2
+    cotangent(2) = acos(e01.dot(e12) / (e01.norm() * e12.norm())); // angle opposite edge 0-2
+    
+    
+    cotangent(0) = sqrt(e01.norm()) / sqrt(e12.norm());
+    cotangent(1) = sqrt(e12.norm()) / sqrt(e02.norm());
+    cotangent(2) = sqrt(e02.norm()) / sqrt(e01.norm());
 
     return cotangent;
-//    Eigen::Vector3d cotangent(0.0, 0.0, 0.0);
-//
-//    //3D positions of the vertices
-//    Eigen::Vector3d v0 = vertices_.row(faces_(face_index, 0));
-//    Eigen::Vector3d v1 = vertices_.row(faces_(face_index, 1));
-//    Eigen::Vector3d v2 = vertices_.row(faces_(face_index, 2));
-//
-//    Eigen::Vector3d e01 = v0 - v1;
-//    Eigen::Vector3d e12 = v1 - v2;
-//    Eigen::Vector3d e02 = v0 - v2;
-//    cotangent(0) = acos(e12.dot(e02) / (e12.norm() * e02.norm())); // angle opposite edge 0-1
-//    cotangent(1) = acos(e01.dot(e02) / (e01.norm() * e02.norm())); // angle opposite edge 1-2
-//    cotangent(2) = acos(e01.dot(e12) / (e01.norm() * e12.norm())); // angle opposite edge 0-2
-//
-//    return cotangent;
 }
 
 double ArapCompute::angleBetweenVectors(const Eigen::Vector3d &a, const Eigen::Vector3d &b) const {
@@ -148,8 +133,8 @@ void ArapCompute::computeLaplaceBeltramiOperator() {
             //iterate over the neighbors of the vertix i
             double diagWeight = 0;
             for (auto &neighbor : NeighborList[i]) {
-//                double weight = weight_.coeff(i, neighbor);
-                double weight = 1.0;
+                double weight = weight_.coeff(i, neighbor);
+                //double weight = 1.0;
 
                 diagWeight += weight;
                 L_operator.insert(i, neighbor) = -weight;
@@ -207,8 +192,8 @@ void ArapCompute::ComputeRotations() {
         for (int j : NeighborList[i]) {
             restEdge = vertices_.row(i) - vertices_.row(j);
             deformedEdge = updatedVertices_.row(i) - updatedVertices_.row(j);
-//            auto weight = weight_.coeff(i, j);
-            auto weight = 1.0;
+            auto weight = weight_.coeff(i, j);
+            //auto weight = 1.0;
 
             sum += weight * restEdge * deformedEdge.transpose();
 
@@ -239,8 +224,8 @@ void ArapCompute::ComputeRightHandSide() {
         } else {
             //Iterate over neighbors of vertex i
             for (int j : NeighborList[i]) {
-//            double weight = weight_.coeff(i, j) / 2.0;
-                double weight = 1.0;
+            double weight = weight_.coeff(i, j) / 2.0;
+                //double weight = 1.0;
 
                 RHS.row(i) +=
                         weight / 2.0 * (rotations[i] + rotations[j]) * (vertices_.row(i) - vertices_.row(j)).transpose();
@@ -265,7 +250,7 @@ void ArapCompute::alternatingOptimization() {
     ComputeWeights();
     computeNeighbourVertices();
     computeLaplaceBeltramiOperator();
-//    NaiveLaplaceEditing();
+    NaiveLaplaceEditing();
 
     for (int iter = 0; iter < maxIterations_; iter++) {
         ComputeRotations();

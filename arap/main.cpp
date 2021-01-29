@@ -9,9 +9,8 @@ int main(int argc, char** argv) {
     Eigen::MatrixXd deformedV;
     Eigen::MatrixXi F;
 
-    int currentVertexID;
     // inputs for the ARAP
-    int maxIter = 5;
+    int maxIter = 20;
     Eigen::Vector3d oldPosition;
     Eigen::Vector3d newPosition;
 
@@ -56,17 +55,26 @@ int main(int argc, char** argv) {
         }
         viewer.data().set_points(fixpointmatrix, Eigen::RowVector3d(255,0,0));
         
-        currentVertexID = vertexID;
+        
+        std::cout << "computing arap now" << std::endl;
+        ArapCompute arap(V, plugin.fixedPoints, F, maxIter);
+        arap.alternatingOptimization();
+        viewer.data().set_vertices(arap.getUpdatedVertices());
+        deformedV = arap.getUpdatedVertices();
     };
 
-    //this line down here is causing a problem!
-   // oldPosition = V.row(currentVertexID);
 
     plugin.callback_vertex_dragged = [&](int vertexID, const Eigen::Vector3d& new_position) {
         std::cout << "INFO: updating vertex " << vertexID << " to new vertex position" /*<< new_position */<< std::endl;
-        deformedV.row(vertexID) = new_position;
-        viewer.data().set_vertices(deformedV);
+        //deformedV.row(vertexID) = new_position;
+        //viewer.data().set_vertices(deformedV);
         //newPosition = new_position;
+        
+        std::cout << "computing arap now" << std::endl;
+        ArapCompute arap(deformedV, plugin.fixedPoints, F, 0);
+        arap.alternatingOptimization();
+        viewer.data().set_vertices(arap.getUpdatedVertices());
+        //deformedV = arap.getUpdatedVertices();
     };
 
     viewer.callback_key_pressed = [&](igl::opengl::glfw::Viewer& viewer, unsigned int key, int modifiers) -> bool {
