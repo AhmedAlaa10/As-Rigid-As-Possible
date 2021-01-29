@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
     Eigen::Vector3d newPosition;
 
     // optional command line argument for different files (or paths)
-    std::string path = argc == 2 ? argv[1] : "../data/test2.off";
+    std::string path = argc == 2 ? argv[1] : "../data/bunny.off";
     
     // load the mesh in off format, and abort on any read errors (unfortunately, libigl does not seem to
     // provide any further hints as to what exactly went wrong, so this just prints out a generic usage hint)
