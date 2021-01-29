@@ -48,11 +48,6 @@ private:
     //Computes the cotangents of the edges in the given face
     Eigen::Vector3d ComputeCotangent(int face_index) const;
 
-    //Helper function to map from the vertex to the edge
-    const int VertexToEdge_map[3][2] = {{0, 1},
-                                        {1, 2},
-                                        {2, 0}};
-
     //Helper function to compute the angle between to vectors
     double angleBetweenVectors(const Eigen::Vector3d &a, const Eigen::Vector3d &b) const;
 
