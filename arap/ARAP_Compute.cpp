@@ -260,7 +260,7 @@ void ArapCompute::ComputeRightHandSide() {
 //            double weight = weight_.coeff(i, j) / 2.0;
             double weight = 1.0;
 
-            RHS.row(i) -=
+            RHS.row(i) +=
                     weight / 2.0 * (rotations[i] + rotations[j]) * (vertices_.row(i) - vertices_.row(j)).transpose();
         }
     }
