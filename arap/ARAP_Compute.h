@@ -36,6 +36,10 @@ public:
     void ComputeRightHandSide();
 
     void alternatingOptimization();
+    
+    void set_fixpoints (const std::map<int, Eigen::Vector3d> &fixedVertices);
+    
+    void iterate();
 
     //A getter function: returns the updatedVertices_ matrix.
     const Eigen::MatrixXd &getUpdatedVertices() const;
@@ -76,7 +80,7 @@ private:
     /*
     *  Fixed vertices as anchor points. Maps the vertex id to the new, fixed position
     */
-    const std::map<int, Eigen::Vector3d> fixedVertices;
+    std::map<int, Eigen::Vector3d> fixedVertices;
 
     //Maximum no. of iterations used to solve the ARAP problem
     int maxIterations_;

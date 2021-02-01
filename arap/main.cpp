@@ -34,6 +34,15 @@ int main(int argc, char** argv) {
     VertexSelectionPlugin plugin;
     viewer.data().point_size = 20;
     
+    
+    // initial ARAP pass, to scale the mesh down
+    ArapCompute arap(V, plugin.fixedPoints, F, 1);
+    // copy the initial mesh, so we can restore it later
+    arap.alternatingOptimization();
+    deformedV = arap.getUpdatedVertices();
+    
+    
+    
     // a new point was selected (i.e. click or dragging stopped)
     plugin.callback_anchor_selected = [&](int vertexID, const Eigen::Vector3d& position) {
         std::cout << "INFO: selected an anchor point at:\n" << position << std::endl;
@@ -50,11 +59,11 @@ int main(int argc, char** argv) {
         viewer.data().set_points(fixpointmatrix, Eigen::RowVector3d(255,0,0));
         
         // perform a full ARAP pass, display & set the current mesh to the result
-        std::cout << "INFO: computing full arap" << std::endl;
-        ArapCompute arap(V, plugin.fixedPoints, F, maxIter);
+        arap.set_fixpoints (plugin.fixedPoints);
         arap.alternatingOptimization();
         viewer.data().set_vertices(arap.getUpdatedVertices());
         deformedV = arap.getUpdatedVertices();
+        
     };
 
     // update function: currently dragging a vertex
@@ -69,14 +78,13 @@ int main(int argc, char** argv) {
 
     // user pressed a key
     viewer.callback_key_pressed = [&](igl::opengl::glfw::Viewer& viewer, unsigned int key, int modifiers) -> bool {
-        /*if (key == 'i' || key == 'I') {
+        if (key == 'i' || key == 'I') {
             std::cout << "computing arap now" << std::endl;
-            ArapCompute arap(V, plugin.fixedPoints, F, maxIter);
-            arap.alternatingOptimization();
+            arap.iterate();
             viewer.data().set_vertices(arap.getUpdatedVertices());
             deformedV = arap.getUpdatedVertices();
             return true;
-        } else*/ if (key == 'r' || key == 'R') {
+        } else if (key == 'r' || key == 'R') {
             // redo the initial size hack
             plugin.reset();
             ArapCompute arap(V, plugin.fixedPoints, F, 1);
@@ -91,11 +99,6 @@ int main(int argc, char** argv) {
 
     viewer.plugins.push_back(&plugin);
     
-    // initial ARAP pass, to scale the mesh down
-    ArapCompute arap(V, plugin.fixedPoints, F, 1);
-    // copy the initial mesh, so we can restore it later
-    arap.alternatingOptimization();
-    deformedV = arap.getUpdatedVertices();
     
     //deformedV = V;
     viewer.data().set_mesh(deformedV, F);
@@ -104,7 +107,7 @@ int main(int argc, char** argv) {
     std::cout << "\n ==== ARAP keybindings ====\n"
               << "  Ctrl    Make fixpoint\n"
               << "  Shift   Drag fixpoint with mouse\n"
-              /*<< "  i       Apply ARAP algorithm\n"*/
+              << "  i       Iterate ARAP one step further\n"
               << "  r       Reset mesh" << std::endl;
     viewer.launch();
 }

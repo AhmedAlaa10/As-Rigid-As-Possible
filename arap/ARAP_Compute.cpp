@@ -24,6 +24,13 @@ ArapCompute::ArapCompute(const Eigen::MatrixXd &vertices,
     }
 }
 
+void ArapCompute::set_fixpoints (const std::map<int, Eigen::Vector3d> &fixedVertices) {
+    this->fixedVertices = fixedVertices;
+    for (const auto &vertex : fixedVertices) {
+        updatedVertices_.row(vertex.first) = vertex.second;
+    }
+}
+
 void ArapCompute::ComputeWeights() {
     std::cout << "Computing weights ..." << std::endl;
 
@@ -35,10 +42,11 @@ void ArapCompute::ComputeWeights() {
     weight_.resize(nVertices, nVertices);
     weight_.setZero();
     
+    std::cout << "faces: " << nFaces << std::endl;
     for (int face = 0; face < nFaces; face++) {
         //compute the cotangent vector of the face
         Eigen::Vector3d cotan = ComputeCotangent(face);
-
+    
         //loop over the three vertices within the face
         for (int v = 0; v < 3; v++) {
             //indices of the two vertices in the edge (equivalent to the old VertexToEdge map)
@@ -237,3 +245,14 @@ void ArapCompute::alternatingOptimization() {
 
     std::cout << "Optimization ... DONE !" << std::endl;
 }
+
+
+void ArapCompute::iterate() {
+    ComputeRotations();
+    ComputeRightHandSide();
+    UpdateVertices();
+}
+
+
+
+
