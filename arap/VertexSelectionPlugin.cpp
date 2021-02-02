@@ -53,6 +53,7 @@ bool VertexSelectionPlugin::mouse_down(int button, int modifier) {
             this->dragging = true;
             this->drag_vertex_idx = selected;
             this->fixedPoints[selected] = this->viewer->data().V.row(selected);
+            this->callback_vertex_drag_start(selected, this->viewer->data().V.row(selected));
         }
         return true;
     }

@@ -26,6 +26,7 @@ class VertexSelectionPlugin : public igl::opengl::glfw::ViewerPlugin {
     // callback called when a vertex is clicked, vertex id is passed
     std::function<void(int, Eigen::Vector3d)> callback_anchor_selected;
     std::function<void(int, Eigen::Vector3d)> callback_vertex_dragged;
+    std::function<void(int, Eigen::Vector3d)> callback_vertex_drag_start;
     VertexSelectionPlugin() = default;
     void reset();
 

@@ -229,18 +229,17 @@ void ArapCompute::UpdateVertices() {
     updatedVertices_ = sparse_solver.solve(RHS);
 }
 
-void ArapCompute::alternatingOptimization() {
+void ArapCompute::alternatingOptimization(int maxIterations) {
     std::cout << "Alternating optimization ..." << std::endl;
+    auto iterations = maxIterations == 0 ? maxIterations_ : maxIterations;
 
     ComputeWeights();
     computeNeighbourVertices();
     computeLaplaceBeltramiOperator();
     NaiveLaplaceEditing();
 
-    for (int iter = 0; iter < maxIterations_; iter++) {
-        ComputeRotations();
-        ComputeRightHandSide();
-        UpdateVertices();
+    for (int iter = 0; iter < iterations; iter++) {
+        ArapCompute::iterate();
     }
 
     std::cout << "Optimization ... DONE !" << std::endl;

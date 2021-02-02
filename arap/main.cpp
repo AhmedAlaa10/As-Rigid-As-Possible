@@ -1,5 +1,6 @@
 #include <igl/opengl/glfw/Viewer.h>
 #include <igl/readOFF.h>
+#include <chrono>
 
 #include "VertexSelectionPlugin.h"
 #include "ARAP_Compute.h"
@@ -36,7 +37,7 @@ int main(int argc, char** argv) {
     
     
     // initial ARAP pass, to scale the mesh down
-    ArapCompute arap(V, plugin.fixedPoints, F, 1);
+    ArapCompute arap(V, plugin.fixedPoints, F, 20);
     // copy the initial mesh, so we can restore it later
     arap.alternatingOptimization();
     deformedV = arap.getUpdatedVertices();
@@ -59,21 +60,36 @@ int main(int argc, char** argv) {
         viewer.data().set_points(fixpointmatrix, Eigen::RowVector3d(255,0,0));
         
         // perform a full ARAP pass, display & set the current mesh to the result
-        arap.set_fixpoints (plugin.fixedPoints);
-        arap.alternatingOptimization();
+        arap.set_fixpoints(plugin.fixedPoints);
+        arap.alternatingOptimization(50);
         viewer.data().set_vertices(arap.getUpdatedVertices());
         deformedV = arap.getUpdatedVertices();
         
     };
+    plugin.callback_vertex_drag_start = [&](int vertexID, const Eigen::Vector3d& new_position) {
+        std::cout << "INFO: dragging vertex #" << vertexID << ", doing simple deformation" << std::endl;
+        auto now = std::chrono::high_resolution_clock::now();
+        // "preview" transformation. start with the current (already-deformed) mesh to make it look better
+        arap.set_fixpoints(plugin.fixedPoints);
+        arap.alternatingOptimization(0);
+        viewer.data().set_vertices(arap.getUpdatedVertices());
+        deformedV = arap.getUpdatedVertices();
+    };
 
+    auto last_update = std::chrono::high_resolution_clock::now();
     // update function: currently dragging a vertex
     plugin.callback_vertex_dragged = [&](int vertexID, const Eigen::Vector3d& new_position) {
         std::cout << "INFO: dragging vertex #" << vertexID << ", doing simple deformation" << std::endl;
-        
-        // "preview" transformation. start with the current (already-deformed) mesh to make it look better
-        ArapCompute arap(deformedV, plugin.fixedPoints, F, 0);
-        arap.alternatingOptimization();
-        viewer.data().set_vertices(arap.getUpdatedVertices());
+        auto now = std::chrono::high_resolution_clock::now();
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update).count() > 0.01) { // 200ms
+            std::cout << "elapsed time since last update: " << (now - last_update).count() << "s" << std::endl;
+            // "preview" transformation. start with the current (already-deformed) mesh to make it look better
+            arap.iterate();
+            arap.set_fixpoints(plugin.fixedPoints);
+            viewer.data().set_vertices(arap.getUpdatedVertices());
+            deformedV = arap.getUpdatedVertices();
+            last_update = now;
+        }
     };
 
     // user pressed a key
@@ -87,8 +103,8 @@ int main(int argc, char** argv) {
         } else if (key == 'r' || key == 'R') {
             // redo the initial size hack
             plugin.reset();
-            ArapCompute arap(V, plugin.fixedPoints, F, 1);
-            arap.alternatingOptimization();
+            arap.set_fixpoints(plugin.fixedPoints);
+            arap.alternatingOptimization(1);
             deformedV = arap.getUpdatedVertices();
             viewer.data().set_vertices(deformedV);
             viewer.data().clear_points();

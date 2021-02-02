@@ -35,7 +35,7 @@ public:
 
     void ComputeRightHandSide();
 
-    void alternatingOptimization();
+    void alternatingOptimization(int maxIterations = 0);
     
     void set_fixpoints (const std::map<int, Eigen::Vector3d> &fixedVertices);
     
