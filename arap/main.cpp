@@ -13,7 +13,11 @@ enum ARAP_MODE {
     LIBIGL
 };
 
-
+const char* usage_hint = 
+"Usage: arap [MODE] [FILENAME]\n\
+\n\
+    MODE:   can be either 'own' or 'libigl'\n\
+FILENAME:   path to a OFF file to read in";
 
 int main(int argc, char** argv) {
     Eigen::MatrixXd V;
@@ -33,8 +37,8 @@ int main(int argc, char** argv) {
         if (!strcmp(argv[1],"libigl")) mode = LIBIGL;
         else if (!strcmp(argv[1],"own")) mode = OWN;
         else if (argc == 2) path = argv[1];
-        else if (argc != 3) {
-            std::cout << "wrong usage!" << std::endl;
+        else if (argc >= 3) {
+            std::cout << usage_hint << std::endl;
             return 1;
         }
         if (argc == 3) path = argv[2];
@@ -46,7 +50,7 @@ int main(int argc, char** argv) {
     // load the mesh in off format, and abort on any read errors (unfortunately, libigl does not seem to
     // provide any further hints as to what exactly went wrong, so this just prints out a generic usage hint)
     if (!igl::readOFF(path, V, F)) {
-        std::cout << "usage: " << argv[0] << " [meshfile.off]" << std::endl;
+        std::cout << usage_hint << std::endl;
         return 1;
     }
 
